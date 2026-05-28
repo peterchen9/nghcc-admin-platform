@@ -44,10 +44,19 @@ docker compose restart
 docker compose down
 ```
 
+## 目前本機測試狀態
+
+2026-05-28 已完成本機 Docker 測試：
+
+- `nghcc-admin-frontend` 可啟動並回傳 `200 text/html`
+- `nghcc-admin-backend` 可啟動，`/api/health/` 回傳 database `ok`
+- `nghcc-admin-db` 可啟動並通過 healthcheck
+- `uploads/` 經容器重啟後仍保留測試檔案
+- PostgreSQL named volume 經容器重啟後仍可正常連線
+
 ## 文件
 
 - [既有系統盤點](docs/system-audit.md)
 - [本機開發](docs/local-development.md)
 - [部署說明](docs/deployment.md)
 - [除錯紀錄](docs/debug-notes.md)
-
