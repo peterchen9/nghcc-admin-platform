@@ -132,3 +132,53 @@ docker-compose up -d --build
 - MySQL 版 `backup-db.ps1` 可正常匯出 SQL
 
 MySQL 8 使用一般應用帳號執行 `mysqldump` 時，若未加 `--no-tablespaces` 會出現 `PROCESS privilege` 錯誤；腳本已加入 `--no-tablespaces`。
+
+### 2026-05-28 複製舊系統程式內容
+
+依照「目錄要一樣」的要求，已將舊系統程式內容複製到新專案 `backend/`：
+
+- `backend/nads26/`
+- `backend/modules/`
+- `backend/templates/`
+- `backend/scripts/`
+- `backend/manage.py`
+- `backend/requirements.txt`
+
+排除項目：
+
+- `.env`
+- `db.sqlite3`
+- `mysql_data/`
+- `media/` 實體檔
+- `__pycache__/`
+- `*.pyc`
+- 明文資料庫密碼與使用者密碼雜湊
+
+Nginx frontend 已改為 reverse proxy，`http://localhost:26001/` 直接代理到 Django 舊系統介面。
+
+已匯入本機備份 `backups/legacy-nads26/nads26db-mysql-dump.sql.gz` 到本機 MySQL database `nghcc_admin_platform`，目前本機資料庫有 52 張資料表。
+
+本機 `uploads/` 會掛載到容器 `/app/media`，並已建立舊系統主要 media 子目錄：
+
+- `uploads/eureka/photo`
+- `uploads/hymns/html`
+- `uploads/hymns/midi`
+- `uploads/hymns/mp3`
+- `uploads/hymns/pdf`
+
+完整 `media/` 約 6.0G，尚未複製實體檔。
+
+同步腳本中的舊資料庫密碼已改為環境變數：
+
+- `REMOTE_MEMBER_DB_PASSWORD`
+- `DATACENTER_DB_PASSWORD`
+- `NADS26_DB_PASSWORD`
+
+`migrate_users.py` 中的舊密碼雜湊也已移除，避免把可重用的帳號雜湊提交到 GitHub。
+
+驗證結果：
+
+- `http://localhost:26001/` 回傳 `200 text/html; charset=utf-8`
+- `http://localhost:26002/api/health/` 回傳 database `ok`
+- `.\scripts\check-local.ps1` 通過
+- `/hymns/`、`/eureka/`、`/users/` 目前回傳 `302`，符合需要登入或權限導向的舊系統行為

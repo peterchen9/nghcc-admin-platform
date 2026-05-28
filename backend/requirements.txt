@@ -1,4 +1,12 @@
-Django==5.0.14
-dj-database-url==2.3.0
-gunicorn==23.0.0
-PyMySQL==1.1.1
+Django>=5.0
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+gunicorn
+mysqlclient
+requests
+pymysql
+openpyxl
+python-barcode==0.16.1
+django-ckeditor
+yt-dlp

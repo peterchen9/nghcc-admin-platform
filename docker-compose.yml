@@ -24,11 +24,12 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 3306
-      UPLOAD_DIR: /app/uploads
+      DB_PASS: ${DB_PASSWORD:-change_me_password}
+      UPLOAD_DIR: /app/media
     ports:
       - "${BACKEND_PORT:-26002}:8000"
     volumes:
-      - ./uploads:/app/uploads
+      - ./uploads:/app/media
     depends_on:
       db:
         condition: service_healthy

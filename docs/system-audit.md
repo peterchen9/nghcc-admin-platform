@@ -223,6 +223,32 @@ yt-dlp
 
 `media/` 約 6.0G，尚未下載完整實體檔。正式遷移前需安排外接硬碟、NAS 或主機對主機複製流程完整備份。
 
+## 本機複製紀錄
+
+已將舊系統程式內容複製進新專案 `backend/`，保留舊系統主要目錄名稱：
+
+- `nads26/`
+- `modules/`
+- `templates/`
+- `scripts/`
+
+未複製到 Git 的項目：
+
+- `.env`
+- `db.sqlite3`
+- `mysql_data/`
+- `media/` 實體檔
+- `__pycache__/`
+- `*.pyc`
+
+已將舊系統 MySQL dump 匯入本機 `nghcc_admin_platform`，並改由新專案 Docker Compose 管理：
+
+- `nghcc-admin-frontend`
+- `nghcc-admin-backend`
+- `nghcc-admin-db`
+
+本機 `uploads/` 掛載到容器 `/app/media`，保留舊系統 media path。已建立主要 media 子目錄，但尚未複製 6.0G 實體檔。
+
 ## 待補查項目
 
 - `media/` 完整檔案備份與校驗

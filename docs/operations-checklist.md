@@ -8,7 +8,8 @@
 - `nghcc-admin-db` 狀態為 `healthy`
 - `http://localhost:26001/` 回傳正常頁面
 - `http://localhost:26002/api/health/` 回傳 database `ok`
-- `http://localhost:26001/api/modules/` 可透過 frontend proxy 取得資料
+- `http://localhost:26002/api/health/` 回傳 database `ok`
+- 首頁內容包含 sidebar marker
 - 重啟容器後 `uploads/` 資料保留
 - 重啟容器後 MySQL 資料庫仍可連線
 

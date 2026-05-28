@@ -46,7 +46,17 @@ docker compose exec backend python manage.py createsuperuser
 
 ## uploads 持久化
 
-本機 `uploads/` 會掛載到後端容器 `/app/uploads`。容器重啟後，上傳檔案應保留。
+本機 `uploads/` 會掛載到後端容器 `/app/media`，對應舊系統的 media 目錄。容器重啟後，上傳檔案應保留。
+
+目前已建立與舊系統相同的主要 media 子目錄：
+
+```text
+uploads/eureka/photo
+uploads/hymns/html
+uploads/hymns/midi
+uploads/hymns/mp3
+uploads/hymns/pdf
+```
 
 ## database 持久化
 

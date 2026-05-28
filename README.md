@@ -8,8 +8,8 @@
 
 ## 技術架構
 
-- Frontend：Nginx 靜態入口與 reverse proxy
-- Backend：Python 3.11、Django 5、Gunicorn
+- Frontend：Nginx reverse proxy
+- Backend：Python 3.11、Django 5、Gunicorn，程式結構沿用舊系統 `nads26/`、`modules/`、`templates/`
 - Database：MySQL 8
 - Container：Docker Compose
 - 持久化資料：MySQL volume、`uploads/`
@@ -31,7 +31,6 @@ docker-compose up -d --build
 
 - Frontend：http://localhost:26001
 - Backend health：http://localhost:26002/api/health/
-- Backend modules：http://localhost:26002/api/modules/
 - Django Admin：http://localhost:26001/admin/
 - MySQL：localhost:26003
 
@@ -61,6 +60,7 @@ docker compose down
 - `nghcc-admin-db` 可啟動並通過 healthcheck
 - `uploads/` 經容器重啟後仍保留測試檔案
 - MySQL named volume 經容器重啟後仍可正常連線
+- 已匯入舊系統 MySQL dump，本機首頁可顯示舊系統介面與選單資料
 
 ## 文件
 

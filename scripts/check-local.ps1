@@ -1,7 +1,6 @@
 param(
     [string]$FrontendUrl = "http://localhost:26001/",
     [string]$BackendUrl = "http://localhost:26002/api/health/",
-    [string]$ModulesUrl = "http://localhost:26001/api/modules/",
     [string]$ComposeCommand = "docker-compose"
 )
 
@@ -38,7 +37,6 @@ Invoke-Compose @("ps")
 
 $frontend = Assert-HttpOk -Name "Frontend" -Url $FrontendUrl
 $backend = Assert-HttpOk -Name "Backend health" -Url $BackendUrl
-$modules = Assert-HttpOk -Name "Frontend API proxy" -Url $ModulesUrl
 
 $health = $backend.Content | ConvertFrom-Json
 if ($health.database -ne "ok") {
@@ -46,5 +44,8 @@ if ($health.database -ne "ok") {
 }
 
 Write-Host "Database OK: $($health.database)"
-Write-Host "Modules API response length: $($modules.Content.Length)"
+if ($frontend.Content -notmatch "sidebar") {
+    throw "Frontend content check failed: expected title was not found."
+}
+Write-Host "Frontend content OK: sidebar marker found"
 Write-Host "Local health check completed."

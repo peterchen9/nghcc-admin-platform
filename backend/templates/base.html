@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ site_name }}{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #2f4156;
+            --sidebar-bg: #2b3e55;
+            --accent-color: #bcdcff;
+            --text-primary: #ffffff;
+            --text-secondary: #cbd5e1;
+            --sidebar-width: 280px;
+            --transition-speed: 0.3s;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
+            transition: transform var(--transition-speed);
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .sidebar-header h1 {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .nav-menu {
+            flex-grow: 1;
+            padding: 5px !important;
+            list-style: none;
+            margin: 0;
+        }
+
+        .nav-item {
+            margin-bottom: 0px !important;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 6px 12px !important;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-weight: 400;
+            gap: 8px;
+            font-size: 0.92rem !important;
+            position: relative;
+        }
+
+        .nav-link .arrow {
+            font-size: 0.7rem;
+            width: 12px;
+            transition: transform 0.2s;
+            opacity: 0.5;
+            display: inline-block;
+        }
+
+        .nav-item.open > .nav-link .arrow {
+            transform: rotate(90deg);
+        }
+
+        /* Sub-menu styling */
+        .sub-menu {
+            list-style: none;
+            padding-left: 28px;
+            margin: 0;
+            display: none;
+        }
+
+        .nav-item.open .sub-menu {
+            display: block;
+        }
+
+        .sub-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 12px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.88rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .sub-link:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+            color: var(--accent-color);
+        }
+
+        .sub-link.active {
+            background-color: rgba(188, 220, 255, 0.1);
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .sub-link .sub-icon {
+            font-size: 0.8rem;
+            width: 16px;
+            text-align: center;
+            opacity: 0.7;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--accent-color);
+        }
+
+        .sidebar-logo {
+            width: 120px;
+            height: auto;
+            margin-bottom: 10px;
+            filter: brightness(0) invert(1); /* Optional: make black logo white if needed */
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--accent-color);
+            transform: translateX(5px);
+        }
+
+        .nav-link.active {
+            background-color: rgba(188, 220, 255, 0.1);
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        /* Main Content Styling */
+        .main-wrapper {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        header.top-bar {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            background-color: rgba(47, 65, 86, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 90;
+        }
+
+        .content-area {
+            padding: 40px;
+            flex-grow: 1;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            margin-top: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (min-width: 1025px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: var(--sidebar-width);
+                height: 100vh;
+                overflow-y: auto;
+                z-index: 100;
+            }
+            .main-wrapper {
+                margin-left: var(--sidebar-width);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                position: fixed;
+                height: 100vh;
+                transform: translateX(-100%);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header" style="padding: 20px 30px; text-align: center;">
+                <img src="/static/images/logo.png" class="sidebar-logo" alt="Logo" onerror="this.style.display='none'">
+                <h1 style="font-size: 1.8rem;">{{ site_name }}</h1>
+                <p style="font-size: 0.75rem; opacity: 0.6; margin-top: 5px;">北門行政平台</p>
+            </div>
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                            <span>首頁</span>
+                        </a>
+                    </li>
+                    {% for item in side_menu %}
+                    <li class="nav-item {% if item.children.all %}has-children{% endif %}" id="menu-{{ item.id }}">
+                        <a href="{{ item.route|default:'#' }}" class="nav-link {% if request.path == item.route %}active{% endif %}" onclick="toggleMenu(event, 'menu-{{ item.id }}', '{{ item.route }}')">
+                            <span class="arrow">{% if item.children.all %}▶{% endif %}</span>
+                            {% if item.icon %}<span>{{ item.icon }}</span>{% endif %}
+                            <span>{{ item.title }}</span>
+                        </a>
+                        {% if item.children.all %}
+                        <ul class="sub-menu">
+                            {% for child in item.children.all %}
+                            <li>
+                                <a href="{{ child.route|default:'#' }}" class="sub-link {% if request.path == child.route %}active{% endif %}">
+                                    <span class="sub-icon">{{ child.icon|default:'●' }}</span>
+                                    <span>{{ child.title }}</span>
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-wrapper">
+            <header class="top-bar">
+                <div class="search-box"></div>
+                <div class="user-profile" style="position: relative; cursor: pointer;">
+                    {% if user.is_authenticated %}
+                        <div id="userMenuBtn" style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 32px; height: 32px; background: var(--accent-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--sidebar-bg); font-weight: bold;">
+                                {{ user.username|first|upper }}
+                            </div>
+                            <span>{{ user.username }}</span>
+                            <span style="font-size: 0.8rem;">▼</span>
+                        </div>
+                        <!-- Dropdown Menu -->
+                        <div id="userDropdown" style="display: none; position: absolute; top: 100%; right: 0; background: var(--sidebar-bg); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 10px; min-width: 180px; margin-top: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);">
+                            <a href="/admin/password_change/" style="display: block; padding: 10px; color: var(--text-primary); text-decoration: none; border-radius: 8px;">修改密碼</a>
+                            <a href="/admin/auth/user/{{ user.id }}/change/" style="display: block; padding: 10px; color: var(--text-primary); text-decoration: none; border-radius: 8px;">個人資料</a>
+                            <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 8px 0;">
+                            <form action="/admin/logout/" method="post" id="logoutForm">
+                                {% csrf_token %}
+                                <button type="submit" style="width: 100%; text-align: left; background: none; border: none; padding: 10px; color: #f87171; cursor: pointer; font-family: inherit;">登出</button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <a href="/admin/login/" style="color: var(--accent-color); text-decoration: none;">登入</a>
+                    {% endif %}
+                </div>
+            </header>
+
+            <main class="content-area">
+                {% block content %}
+                <div class="card">
+                    <h2>{{ home_title }}</h2>
+                    <p style="color: var(--text-secondary); line-height: 1.6;">
+                        {{ home_desc }}
+                    </p>
+                </div>
+                {% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function toggleMenu(event, id, route) {
+            const item = document.getElementById(id);
+            const hasChildren = item.classList.contains('has-children');
+            
+            if (hasChildren) {
+                if (route === '#' || route === '') {
+                    event.preventDefault();
+                }
+                item.classList.toggle('open');
+                
+                // Save state to localStorage
+                let states = {};
+                try {
+                    states = JSON.parse(localStorage.getItem('sidebar_menu_states') || '{}');
+                } catch (e) {}
+                states[id] = item.classList.contains('open');
+                localStorage.setItem('sidebar_menu_states', JSON.stringify(states));
+            }
+        }
+
+        // Keep active menu open on load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Restore from localStorage first
+            let states = {};
+            try {
+                states = JSON.parse(localStorage.getItem('sidebar_menu_states') || '{}');
+            } catch (e) {}
+            
+            for (const [id, open] of Object.entries(states)) {
+                const item = document.getElementById(id);
+                if (item && item.classList.contains('has-children')) {
+                    if (open) {
+                        item.classList.add('open');
+                    } else {
+                        item.classList.remove('open');
+                    }
+                }
+            }
+
+            // Also ensure the active item's parent is open (regardless of localStorage)
+            const activeLink = document.querySelector('.nav-link.active, .sub-link.active');
+            if (activeLink) {
+                const parentItem = activeLink.closest('.has-children');
+                if (parentItem) {
+                    parentItem.classList.add('open');
+                    // Update localStorage so it stays open
+                    states[parentItem.id] = true;
+                    localStorage.setItem('sidebar_menu_states', JSON.stringify(states));
+                }
+            }
+        });
+
+        // User Dropdown Logic
+        const btn = document.getElementById('userMenuBtn');
+        const dropdown = document.getElementById('userDropdown');
+        if (btn && dropdown) {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+            });
+            document.addEventListener('click', () => {
+                dropdown.style.display = 'none';
+            });
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
