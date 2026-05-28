@@ -32,7 +32,7 @@ $dbUser = $envMap["DB_USER"]
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $outputFile = Join-Path $OutputDir "nghcc-admin-db-$timestamp.sql"
 
-Write-Host "Exporting database: $dbName"
-Invoke-Compose @("exec", "-T", "db", "pg_dump", "-U", $dbUser, "-d", $dbName) | Set-Content -Path $outputFile -Encoding UTF8
+Write-Host "Exporting MySQL database: $dbName"
+Invoke-Compose @("exec", "-T", "db", "sh", "-c", "mysqldump --no-tablespaces -u`$MYSQL_USER -p`$MYSQL_PASSWORD `$MYSQL_DATABASE") | Set-Content -Path $outputFile -Encoding UTF8
 
 Write-Host "Database backup completed: $outputFile"

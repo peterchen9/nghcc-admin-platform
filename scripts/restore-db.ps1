@@ -36,9 +36,9 @@ Write-Host "Backup file: $BackupFile"
 Write-Host "Confirm that this is the correct environment. Restore will overwrite current data."
 
 if ($ComposeCommand -eq "docker compose") {
-    Get-Content -Raw $BackupFile | docker compose exec -T db psql -U $dbUser -d $dbName
+    Get-Content -Raw $BackupFile | docker compose exec -T db sh -c "mysql -u`$MYSQL_USER -p`$MYSQL_PASSWORD `$MYSQL_DATABASE"
 } else {
-    Get-Content -Raw $BackupFile | & $ComposeCommand exec -T db psql -U $dbUser -d $dbName
+    Get-Content -Raw $BackupFile | & $ComposeCommand exec -T db sh -c "mysql -u`$MYSQL_USER -p`$MYSQL_PASSWORD `$MYSQL_DATABASE"
 }
 
 Write-Host "Database restore completed."

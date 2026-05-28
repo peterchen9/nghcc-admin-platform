@@ -12,7 +12,7 @@ Compose project name：`nghcc-admin-platform`
 - `frontend`、`backend`、`db` 容器狀態正常
 - `GET /api/health/` 回傳 database `ok`
 - `uploads/` 重啟後資料保留
-- PostgreSQL volume 重啟後資料保留
+- MySQL volume 重啟後資料保留
 - 已備份舊系統原始碼與資料庫
 - 已確認舊系統部署路徑與啟動方式
 
@@ -37,6 +37,7 @@ docker compose logs -f
 
 - `.env` 不可提交到 Git。
 - `DJANGO_SECRET_KEY`、`JWT_SECRET`、`SESSION_SECRET` 必須改為正式亂數。
+- `DB_PASSWORD`、`DB_ROOT_PASSWORD` 必須改為正式亂數。
 - `DJANGO_DEBUG` 正式環境應設定為 `0`。
 - `DJANGO_ALLOWED_HOSTS` 需包含正式 IP 或網域。
 - 若要替換既有 `26001` 服務，需先確認舊服務已完整備份並安排停機窗口。

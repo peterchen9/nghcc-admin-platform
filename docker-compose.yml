@@ -23,7 +23,7 @@ services:
       - .env
     environment:
       DB_HOST: db
-      DB_PORT: 5432
+      DB_PORT: 3306
       UPLOAD_DIR: /app/uploads
     ports:
       - "${BACKEND_PORT:-26002}:8000"
@@ -38,17 +38,18 @@ services:
 
   db:
     container_name: nghcc-admin-db
-    image: postgres:16-alpine
+    image: mysql:8.0
     environment:
-      POSTGRES_DB: ${DB_NAME:-nghcc_admin_platform}
-      POSTGRES_USER: ${DB_USER:-nghcc_admin}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_password}
+      MYSQL_DATABASE: ${DB_NAME:-nghcc_admin_platform}
+      MYSQL_USER: ${DB_USER:-nghcc_admin}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-change_me_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-change_me_root_password}
     ports:
-      - "${DB_EXTERNAL_PORT:-26003}:5432"
+      - "${DB_EXTERNAL_PORT:-26003}:3306"
     volumes:
-      - nghcc-admin-db-data:/var/lib/postgresql/data
+      - nghcc-admin-mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-nghcc_admin} -d ${DB_NAME:-nghcc_admin_platform}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u${DB_USER:-nghcc_admin} -p${DB_PASSWORD:-change_me_password} --silent"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -57,10 +58,9 @@ services:
       - nghcc-admin-network
 
 volumes:
-  nghcc-admin-db-data:
-    name: nghcc-admin-db-data
+  nghcc-admin-mysql-data:
+    name: nghcc-admin-mysql-data
 
 networks:
   nghcc-admin-network:
     name: nghcc-admin-network
-

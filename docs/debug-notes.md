@@ -82,3 +82,53 @@ windows sandbox failed: spawn setup refresh
 - `backups/` 內實際備份檔已由 `.gitignore` 排除，不會提交。
 
 PowerShell 腳本原本使用繁體中文輸出訊息，但 Windows PowerShell 5 讀取無 BOM UTF-8 腳本時會把中文字串解析成亂碼，造成 parser error。為了讓腳本在目前 Windows 環境可直接執行，腳本執行輸出改為 ASCII；繁體中文說明保留在 docs 文件中。
+
+### 2026-05-28 舊系統 SSH 盤點
+
+使用提供的 SSH 帳號完成唯讀盤點，未修改遠端舊系統內容。
+
+確認結果：
+
+- 舊系統主機：`192.168.16.240`
+- hostname：`gino25`
+- 舊系統路徑：`/home/apps1/nads26`
+- 舊系統容器：`nads26-web`
+- 舊系統資料庫容器：`nads26db`
+- 對外 port：`26001`
+- 舊系統資料庫：MySQL 8，database `nads26db`
+- 舊系統啟動命令：`python manage.py runserver 0.0.0.0:8000`
+- 舊系統不是 Git repository
+
+已在本機 `backups/legacy-nads26/` 建立備份：
+
+- `nads26-source-no-media-mysql_data.tar.gz`，大小 `116235` bytes
+- `nads26db-mysql-dump.sql.gz`，大小 `2627335` bytes
+
+`media/` 約 `6.0G`、約 `33824` 個檔案，尚未下載完整實體檔。正式遷移前需安排專門的 media 備份與校驗流程。
+
+### 2026-05-28 新專案資料庫改為 MySQL
+
+因舊系統實際使用 MySQL 8，新專案已從 PostgreSQL 調整為 MySQL 8：
+
+- Docker image：`mysql:8.0`
+- container name：`nghcc-admin-db`
+- volume：`nghcc-admin-mysql-data`
+- local port：`26003 -> 3306`
+- Django driver：`PyMySQL`
+
+已重新執行：
+
+```powershell
+docker-compose up -d --build
+.\scripts\check-local.ps1
+.\scripts\backup-db.ps1
+```
+
+結果：
+
+- frontend、backend、frontend API proxy 均回傳 HTTP 200
+- `/api/health/` 回傳 database `ok`
+- `nghcc-admin-db` 狀態為 `healthy`
+- MySQL 版 `backup-db.ps1` 可正常匯出 SQL
+
+MySQL 8 使用一般應用帳號執行 `mysqldump` 時，若未加 `--no-tablespaces` 會出現 `PROCESS privilege` 錯誤；腳本已加入 `--no-tablespaces`。

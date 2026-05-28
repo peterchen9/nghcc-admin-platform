@@ -10,9 +10,9 @@
 
 - Frontend：Nginx 靜態入口與 reverse proxy
 - Backend：Python 3.11、Django 5、Gunicorn
-- Database：PostgreSQL 16
+- Database：MySQL 8
 - Container：Docker Compose
-- 持久化資料：PostgreSQL volume、`uploads/`
+- 持久化資料：MySQL volume、`uploads/`
 
 ## 本機啟動方式
 
@@ -33,7 +33,7 @@ docker-compose up -d --build
 - Backend health：http://localhost:26002/api/health/
 - Backend modules：http://localhost:26002/api/modules/
 - Django Admin：http://localhost:26001/admin/
-- PostgreSQL：localhost:26003
+- MySQL：localhost:26003
 
 ## 常用指令
 
@@ -60,7 +60,7 @@ docker compose down
 - `nghcc-admin-backend` 可啟動，`/api/health/` 回傳 database `ok`
 - `nghcc-admin-db` 可啟動並通過 healthcheck
 - `uploads/` 經容器重啟後仍保留測試檔案
-- PostgreSQL named volume 經容器重啟後仍可正常連線
+- MySQL named volume 經容器重啟後仍可正常連線
 
 ## 文件
 

@@ -58,7 +58,7 @@ DATABASES = {
     "default": dj_database_url.config(
         default=os.getenv(
             "DATABASE_URL",
-            "postgres://nghcc_admin:change_me_password@db:5432/nghcc_admin_platform",
+            "mysql://nghcc_admin:change_me_password@db:3306/nghcc_admin_platform",
         ),
         conn_max_age=600,
     )
@@ -77,4 +77,3 @@ MEDIA_ROOT = Path(os.getenv("UPLOAD_DIR", BASE_DIR / "uploads"))
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SESSION_COOKIE_NAME = "nghcc_admin_sessionid"
 CSRF_COOKIE_NAME = "nghcc_admin_csrftoken"
-

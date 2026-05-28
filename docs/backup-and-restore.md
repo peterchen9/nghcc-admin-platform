@@ -2,7 +2,7 @@
 
 本專案目前有兩類持久化資料：
 
-- PostgreSQL named volume：`nghcc-admin-db-data`
+- MySQL named volume：`nghcc-admin-mysql-data`
 - 上傳檔案目錄：`uploads/`
 
 正式部署前與每次重大異動前，都應先完成資料庫與 uploads 備份。
@@ -15,7 +15,7 @@ Windows PowerShell：
 .\scripts\backup-db.ps1
 ```
 
-輸出檔會放在 `backups/`，檔名格式如下：
+腳本會透過 `mysqldump` 匯出目前 `.env` 指定的 MySQL database。輸出檔會放在 `backups/`，檔名格式如下：
 
 ```text
 nghcc-admin-db-yyyyMMdd-HHmmss.sql
@@ -48,4 +48,3 @@ nghcc-admin-uploads-yyyyMMdd-HHmmss.zip
 - `backups/` 內的實際備份檔不會提交到 Git。
 - 不要刪除 Docker volume，除非已確認備份可還原。
 - 若部署到 `192.168.16.240`，請在主機本地執行備份，避免網路中斷造成備份不完整。
-

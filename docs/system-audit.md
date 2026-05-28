@@ -7,8 +7,9 @@
 ## 盤點原則
 
 - 本階段只讀取既有系統狀態，不修改舊系統原始碼。
-- 目前尚未取得可用 SSH 權限，因此檔案結構、實際部署路徑與資料庫檔案位置仍需後續補查。
-- 本文件先記錄可由 HTTP、頁面內容與回應標頭確認的資訊。
+- 已於 2026-05-28 取得 SSH 權限並完成唯讀盤點。
+- SSH 盤點只執行讀取、inspect、dump stdout 串流到本機，未修改遠端舊系統內容。
+- 敏感資訊只記錄鍵名與用途，不記錄密碼、secret 或 token。
 
 ## 可確認資訊
 
@@ -23,12 +24,12 @@
 
 ### 技術架構判斷
 
-- 後端：高度可能為 Django。
-- Python：回應標頭顯示 CPython 3.11.14。
-- 啟動方式：目前看起來像 Django development WSGI server，而不是 Gunicorn/uWSGI。
+- 後端：Django。
+- Python：CPython 3.11.14，container image 為 `python:3.11-slim`。
+- 啟動方式：Django development server，命令為 `python manage.py runserver 0.0.0.0:8000`。
 - 前端：伺服器端 rendered HTML template，搭配 inline CSS 與少量 JavaScript。
-- 資料庫：尚無法由 HTTP 直接確認，待 SSH 或原始碼盤點。
-- 套件管理：尚待確認，可能為 `requirements.txt`、Poetry 或其他 Python dependency 管理方式。
+- 資料庫：MySQL 8，Django engine 為 `django.db.backends.mysql`。
+- 套件管理：`requirements.txt`。
 
 ## 可見功能模組
 
@@ -70,25 +71,169 @@
 - `/webav/`
 - `/users/`
 
+## 主機檔案層級盤點
+
+### 主機與容器
+
+- 主機：`192.168.16.240`
+- hostname：`gino25`
+- 使用者：`peter`
+- OS：Ubuntu 22.04 系列，Linux kernel `6.8.0-111-generic`
+- 舊系統容器：`nads26-web`
+- 舊系統資料庫容器：`nads26db`
+- Docker Compose project：`nads26`
+- Compose 設定檔：`/home/apps1/nads26/docker-compose.yml`
+- 專案工作目錄：`/home/apps1/nads26`
+- 容器掛載：`/home/apps1/nads26` bind mount 到 `/app`
+- 26001 port 映射：host `26001` -> container `8000`
+
+### Docker Compose 摘要
+
+- `db`
+  - image：`mysql:8.0`
+  - container：`nads26db`
+  - volume：`./mysql_data:/var/lib/mysql`
+  - port：`33069:3306`
+  - restart：`always`
+- `web`
+  - build：`.`
+  - container：`nads26-web`
+  - command：`python manage.py runserver 0.0.0.0:8000`
+  - volume：`.:/app`
+  - port：`26001:8000`
+  - env_file：`.env`
+  - restart：`always`
+
+### 重要檔案與目錄
+
+- `manage.py`
+- `nads26/settings.py`
+- `nads26/urls.py`
+- `nads26/wsgi.py`
+- `nads26/asgi.py`
+- `Dockerfile`
+- `docker-compose.yml`
+- `.env`
+- `requirements.txt`
+- `templates/`
+- `modules/`
+- `media/`
+- `mysql_data/`
+
+### 資料大小
+
+- `/home/apps1/nads26`：約 `6.3G`
+- `/home/apps1/nads26/media`：約 `6.0G`
+- `/home/apps1/nads26/mysql_data`：約 `286M`
+- MySQL database `nads26db`：約 `15.72MB`
+- `db.sqlite3`：`0`
+- media 檔案數：約 `33,824`
+
+### requirements.txt
+
+```text
+Django>=5.0
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+mysqlclient
+requests
+pymysql
+openpyxl
+python-barcode==0.16.1
+django-ckeditor
+yt-dlp
+```
+
+### Django apps
+
+- `rest_framework`
+- `modules.accounts`
+- `modules.menu`
+- `modules.pages`
+- `modules.humnos`
+- `modules.hymns`
+- `modules.eureka`
+- `ckeditor`
+- `ckeditor_uploader`
+
+### 資料模型摘要
+
+- `modules.accounts.models.UserProfile`
+- `modules.accounts.models.SystemSetting`
+- `modules.eureka.models.Member`
+- `modules.hymns.models.Hymn`
+- `modules.menu.models.MenuItem`
+- `modules.pages.models.Page`
+
+### 已確認路由
+
+- `/admin/`
+- `/users/`
+- `/users/routes/`
+- `/users/create/`
+- `/users/<pk>/`
+- `/users/<pk>/permissions/`
+- `/users/<pk>/delete/`
+- `/ckeditor/`
+- `/api/humnos/info/`
+- `/api/humnos/download/`
+- `/api/hymns/`
+- `/api/hymns/<pk>/`
+- `/api/hymns/<pk>/upload/`
+- `/hymn_resources/htm/<filename>`
+- `/worship/hymns/`
+- `/hymns/`
+- `/webav/`
+- `/eureka/`
+- `/eureka/photo/<filename>`
+- `/eureka/melos/<church_id>`
+- `/eureka/neos`
+- `/eureka/pastoral/`
+- `/eureka/add/`
+- `/eureka/add/download/`
+- `/eureka/modify/`
+- `/eureka/modify/download/`
+- `/eureka/modify/duplicates/`
+- `/eureka/modify/delete/<church_id>/`
+- `/`
+- `/p/<slug>/`
+
+### 安全與維運觀察
+
+- `DEBUG=True`
+- `ALLOWED_HOSTS=['*']`
+- 自訂 middleware：`nads26.middleware.DisableCSRFMiddleware`
+- `django.middleware.csrf.CsrfViewMiddleware` 目前被註解
+- 使用 Django development server 作為容器命令
+- 舊系統目錄不是 Git repository
+
+以上項目後續正式部署前應整理為 production 設定。
+
+## 本機備份紀錄
+
+已在本機 `backups/legacy-nads26/` 建立備份，該目錄已被 `.gitignore` 排除，不會提交：
+
+- `nads26-source-no-media-mysql_data.tar.gz`
+  - 內容：舊系統原始碼與設定檔
+  - 排除：`media/`、`mysql_data/`、`.git/`、`__pycache__/`
+- `nads26db-mysql-dump.sql.gz`
+  - 內容：`nads26db` MySQL dump
+  - 方式：透過 `mysqldump` 從容器 stdout 串流到本機，未在遠端落檔
+
+`media/` 約 6.0G，尚未下載完整實體檔。正式遷移前需安排外接硬碟、NAS 或主機對主機複製流程完整備份。
+
 ## 待補查項目
 
-取得 192.168.16.240 的 SSH 權限後，需補查：
-
-- 專案實際路徑
-- Git 狀態與 remote
-- Docker 或 systemd 啟動方式
-- Django settings module
-- `manage.py`、`requirements.txt`、`pyproject.toml` 或其他套件檔
-- `.env`、環境變數與 secrets 保存方式
-- database engine、database name、連線資訊與備份方式
-- media/uploads 實際路徑
-- static files 來源與收集方式
-- 是否有 Celery、排程、背景工作或檔案轉換工具
-- 既有資料備份策略
+- `media/` 完整檔案備份與校驗
+- 舊系統資料匯入新專案的 migration plan
+- 使用者帳號、權限與 menu permission 規則細節
+- 背景同步腳本實際排程方式，例如 `scripts/sync_members_data.py`
+- 影音下載工具 `yt-dlp` 的使用情境與風險控管
 
 ## 新專案整理決策
 
-既有系統看起來不是前後端分離架構。為了後續維護與 Docker 化，本次新專案採用：
+既有系統不是前後端分離架構。為了後續維護與 Docker 化，本次新專案採用：
 
 - `frontend/`：Nginx 靜態入口與 reverse proxy
 - `backend/`：Django API、Admin 與未來業務邏輯
@@ -96,3 +241,4 @@
 - `uploads/`：使用者上傳檔案持久化目錄
 - `docs/`：盤點、開發、部署與除錯文件
 
+資料庫已調整為 MySQL 8，以貼近舊系統 `nads26db`，降低後續資料遷移成本。

@@ -10,7 +10,7 @@
 - `http://localhost:26002/api/health/` 回傳 database `ok`
 - `http://localhost:26001/api/modules/` 可透過 frontend proxy 取得資料
 - 重啟容器後 `uploads/` 資料保留
-- 重啟容器後資料庫仍可連線
+- 重啟容器後 MySQL 資料庫仍可連線
 
 可使用：
 
@@ -39,4 +39,3 @@
 - Django Admin 可開啟
 - uploads 可寫入與讀取
 - 重新啟動容器後資料仍保留
-

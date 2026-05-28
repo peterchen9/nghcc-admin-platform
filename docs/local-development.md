@@ -50,10 +50,10 @@ docker compose exec backend python manage.py createsuperuser
 
 ## database 持久化
 
-PostgreSQL 使用 Docker named volume：
+MySQL 使用 Docker named volume：
 
 ```text
-nghcc-admin-db-data
+nghcc-admin-mysql-data
 ```
 
 除非已完成備份，不要刪除此 volume。
