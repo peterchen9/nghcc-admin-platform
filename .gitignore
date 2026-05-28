@@ -22,9 +22,10 @@ uploads/*
 database/data/
 database/*.db
 database/*.sqlite*
+backups/*
+!backups/.gitkeep
 
 # Docker / 系統暫存
 *.log
 .DS_Store
 Thumbs.db
-

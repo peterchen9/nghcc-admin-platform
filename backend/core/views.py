@@ -37,10 +37,10 @@ def health_check(request):
             "environment": os.getenv("APP_ENV", "local"),
             "database": database_status,
             "upload_dir": upload_dir,
-        }
+        },
+        json_dumps_params={"ensure_ascii": False},
     )
 
 
 def modules(request):
-    return JsonResponse(MODULES, safe=False)
-
+    return JsonResponse(MODULES, safe=False, json_dumps_params={"ensure_ascii": False})

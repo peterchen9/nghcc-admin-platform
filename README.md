@@ -44,6 +44,14 @@ docker compose restart
 docker compose down
 ```
 
+## 本機健康檢查與備份
+
+```powershell
+.\scripts\check-local.ps1
+.\scripts\backup-db.ps1
+.\scripts\backup-uploads.ps1
+```
+
 ## 目前本機測試狀態
 
 2026-05-28 已完成本機 Docker 測試：
@@ -59,4 +67,6 @@ docker compose down
 - [既有系統盤點](docs/system-audit.md)
 - [本機開發](docs/local-development.md)
 - [部署說明](docs/deployment.md)
+- [備份與還原](docs/backup-and-restore.md)
+- [維運檢查清單](docs/operations-checklist.md)
 - [除錯紀錄](docs/debug-notes.md)

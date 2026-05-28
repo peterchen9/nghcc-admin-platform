@@ -26,6 +26,12 @@ docker compose ps
 docker compose logs -f
 ```
 
+或使用本機健康檢查腳本：
+
+```powershell
+.\scripts\check-local.ps1
+```
+
 確認以下網址：
 
 - Frontend：http://localhost:26001
@@ -52,3 +58,9 @@ nghcc-admin-db-data
 
 除非已完成備份，不要刪除此 volume。
 
+## 本機備份
+
+```powershell
+.\scripts\backup-db.ps1
+.\scripts\backup-uploads.ps1
+```

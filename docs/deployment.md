@@ -41,3 +41,17 @@ docker compose logs -f
 - `DJANGO_ALLOWED_HOSTS` 需包含正式 IP 或網域。
 - 若要替換既有 `26001` 服務，需先確認舊服務已完整備份並安排停機窗口。
 
+## 維運腳本
+
+本機或正式主機可使用以下 PowerShell 腳本輔助檢查與備份：
+
+```powershell
+.\scripts\check-local.ps1
+.\scripts\backup-db.ps1
+.\scripts\backup-uploads.ps1
+```
+
+詳細步驟請參考：
+
+- [備份與還原](backup-and-restore.md)
+- [維運檢查清單](operations-checklist.md)

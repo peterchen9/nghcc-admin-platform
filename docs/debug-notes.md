@@ -62,3 +62,23 @@ windows sandbox failed: spawn setup refresh
 ```
 
 因此本次畫面驗證以 HTTP smoke test 為準，尚未取得瀏覽器截圖。
+
+### 2026-05-28 後續維運腳本驗證
+
+新增並驗證 PowerShell 腳本：
+
+```powershell
+.\scripts\check-local.ps1
+.\scripts\backup-db.ps1
+.\scripts\backup-uploads.ps1
+```
+
+驗證結果：
+
+- `check-local.ps1` 可列出三個容器，並確認 frontend、backend health、frontend API proxy 都回傳 HTTP 200。
+- `check-local.ps1` 可確認 database 狀態為 `ok`。
+- `backup-db.ps1` 可用 `pg_dump` 匯出 PostgreSQL 備份，測試檔大小約 23 KB。
+- `backup-uploads.ps1` 可壓縮 `uploads/`，測試檔大小約 272 bytes。
+- `backups/` 內實際備份檔已由 `.gitignore` 排除，不會提交。
+
+PowerShell 腳本原本使用繁體中文輸出訊息，但 Windows PowerShell 5 讀取無 BOM UTF-8 腳本時會把中文字串解析成亂碼，造成 parser error。為了讓腳本在目前 Windows 環境可直接執行，腳本執行輸出改為 ASCII；繁體中文說明保留在 docs 文件中。
