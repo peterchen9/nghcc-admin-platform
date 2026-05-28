@@ -1,0 +1,66 @@
+name: nghcc-admin-platform
+
+services:
+  frontend:
+    container_name: nghcc-admin-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "${FRONTEND_PORT:-26001}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - nghcc-admin-network
+
+  backend:
+    container_name: nghcc-admin-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      UPLOAD_DIR: /app/uploads
+    ports:
+      - "${BACKEND_PORT:-26002}:8000"
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - nghcc-admin-network
+
+  db:
+    container_name: nghcc-admin-db
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-nghcc_admin_platform}
+      POSTGRES_USER: ${DB_USER:-nghcc_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_password}
+    ports:
+      - "${DB_EXTERNAL_PORT:-26003}:5432"
+    volumes:
+      - nghcc-admin-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-nghcc_admin} -d ${DB_NAME:-nghcc_admin_platform}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - nghcc-admin-network
+
+volumes:
+  nghcc-admin-db-data:
+    name: nghcc-admin-db-data
+
+networks:
+  nghcc-admin-network:
+    name: nghcc-admin-network
+

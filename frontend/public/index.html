@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>北門行政作業平台</title>
+    <link rel="stylesheet" href="/assets/styles.css">
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">北</div>
+        <div>
+          <h1>北門行政作業平台</h1>
+          <p>nghcc-admin-platform</p>
+        </div>
+      </div>
+      <nav id="moduleNav" aria-label="功能模組"></nav>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">本機整理版</p>
+          <h2>行政作業總覽</h2>
+        </div>
+        <a class="admin-link" href="/admin/">Django Admin</a>
+      </header>
+
+      <section class="status-panel">
+        <div>
+          <span class="status-dot" id="statusDot"></span>
+          <span id="healthText">正在檢查後端連線...</span>
+        </div>
+        <code id="apiSignal">GET /api/health/</code>
+      </section>
+
+      <section class="module-grid" id="moduleGrid"></section>
+    </main>
+
+    <script src="/assets/app.js"></script>
+  </body>
+</html>
+
