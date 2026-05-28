@@ -1,0 +1,12 @@
+.git
+.env
+*.log
+__pycache__/
+*.py[cod]
+staticfiles/
+node_modules/
+dist/
+build/
+uploads/*
+database/data/
+

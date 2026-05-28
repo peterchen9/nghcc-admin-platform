@@ -1,0 +1,30 @@
+# Python / Django
+__pycache__/
+*.py[cod]
+*.sqlite3
+.venv/
+venv/
+staticfiles/
+
+# Node / frontend build
+node_modules/
+dist/
+build/
+
+# 環境與機密
+.env
+.env.*
+!.env.example
+
+# 上傳與資料庫實體資料
+uploads/*
+!uploads/.gitkeep
+database/data/
+database/*.db
+database/*.sqlite*
+
+# Docker / 系統暫存
+*.log
+.DS_Store
+Thumbs.db
+
