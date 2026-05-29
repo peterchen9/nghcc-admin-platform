@@ -1,4 +1,4 @@
-# P5 第一階段安全盤點
+# P5 安全盤點與改善紀錄
 
 更新日期：2026-05-29
 
@@ -134,3 +134,54 @@
 | CKEditor/CMS/filer | 只盤點與文件化，未改第三方流程 |
 | production env 樣板 | 已新增 `.env.production.example` |
 | security tests | 已新增 `tests/security/test_upload_validation.py` 與 `tests/security/test_security_settings.py` |
+
+## 第三階段：CSRF 可開關復原方案
+
+本階段目標不是立刻在正式環境強制啟用 CSRF，而是在本機建立可開關、可測試、可回復的復原路徑。
+
+| 環境變數 | 行為 | 用途 |
+| --- | --- | --- |
+| `ENABLE_CSRF_PROTECTION=False` | 維持目前行為，保留 `nads26.middleware.DisableCSRFMiddleware`，不載入 Django `CsrfViewMiddleware` | 本機既有開發與相容模式 |
+| `ENABLE_CSRF_PROTECTION=True` | 載入 `django.middleware.csrf.CsrfViewMiddleware`，停用 `DisableCSRFMiddleware` | CSRF 復原測試模式 |
+
+`DisableCSRFMiddleware` 目前仍保留，方便在測試發現問題時快速回到既有相容模式。正式環境未來若要改成 `ENABLE_CSRF_PROTECTION=True`，需先完成本文件的正式啟用檢查清單。
+
+### 表單與 AJAX 盤點
+
+| 檔案 | POST/AJAX 用途 | 是否有 CSRF token | 是否需修正 | 風險 |
+| --- | --- | --- | --- | --- |
+| `backend/templates/base.html` | `/admin/logout/` 登出表單 | 有 `{% csrf_token %}` | 否 | 低 |
+| `backend/templates/eureka/add.html` | 新朋友登記與下載表單 | 有 `{% csrf_token %}` | 否，仍需人工測新朋友流程 | 中 |
+| `backend/templates/eureka/neos.html` | Eureka 新朋友查詢表單 | 有 `{% csrf_token %}` | 否 | 低 |
+| `backend/templates/hymns/hymns_page.html` | 詩歌新增、修改、刪除、上傳 | 有 `X-CSRFToken` | 否，仍需 CSRF 模式人工測上傳 | 中 |
+| `backend/templates/humnos/humnos_page.html` | 影音資訊查詢與下載 | 有 `X-CSRFToken` | 否，外部下載流程需人工測 | 中 |
+| `backend/templates/accounts/user_list.html` | 使用者新增、更新、刪除、權限更新 | 掃描未見 `X-CSRFToken` | 是，正式啟用 CSRF 前需補 AJAX header 並測權限管理 | 高 |
+| `backend/templates/eureka/eureka.html` | Nominatim 地址查詢 GET | 不需 | 否 | 低 |
+
+本階段未直接修改 `accounts/user_list.html`，因為該頁涉及使用者與權限管理，屬於高敏感流程；需在 P2 權限盤點或 P5 後續小步修正時，搭配人工驗證。
+
+### CSRF 測試模式
+
+新增 `.env.csrf-test.example` 與 `scripts/run-csrf-tests.sh` / `scripts/run-csrf-tests.ps1`。腳本會以 `ENABLE_CSRF_PROTECTION=True` 啟動測試容器並執行 CSRF、smoke、integration、security tests，不會連線 `.240`，也不會修改原本本機 `.env`。
+
+### DisableCSRFMiddleware 移除條件
+
+1. CSRF tests 通過。
+2. Smoke tests 通過。
+3. 所有 POST form 都有 `{% csrf_token %}`。
+4. 所有 AJAX POST/PUT/PATCH/DELETE 都有 `X-CSRFToken`。
+5. 登入、上傳、admin、會員、詩歌人工測試通過。
+6. 已備份正式 DB 與 media。
+7. 已安排 rollback 方法，可回到 `ENABLE_CSRF_PROTECTION=False`。
+
+### 正式啟用前檢查清單
+
+| 項目 | 狀態 |
+| --- | --- |
+| `.env.production.example` 已加入 `ENABLE_CSRF_PROTECTION=False` | 已完成 |
+| 本機可用 `ENABLE_CSRF_PROTECTION=True` 跑測試 | 已完成 |
+| `accounts/user_list.html` AJAX CSRF header | 待修正與人工確認 |
+| CKEditor uploader CSRF 行為 | 待人工確認 |
+| Django admin 登入與登出 | 需在 CSRF 模式人工確認 |
+| 詩歌上傳 | 需在 CSRF 模式人工確認 |
+| Eureka 新朋友照片上傳 | 需在 CSRF 模式人工確認 |

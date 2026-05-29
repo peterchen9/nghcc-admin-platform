@@ -31,6 +31,7 @@
 | --- | --- |
 | `tests/security/test_upload_validation.py` | 上傳副檔名、大小、檔名清理、MIME strict mode、Eureka 不合法照片不建立資料 |
 | `tests/security/test_security_settings.py` | DEBUG、ALLOWED_HOSTS、cookie/security settings 可由環境變數控制 |
+| `tests/security/test_csrf_behavior.py` | `ENABLE_CSRF_PROTECTION` 開關、CSRF middleware 切換、未帶 token 的 POST 拒絕、帶 token 的 POST 不因 CSRF 被拒絕 |
 
 ## 尚未測試的功能
 
@@ -38,7 +39,7 @@
 - QR 報到完整流程：目前只有 `checkin_records` 資料與會員頁局部引用。
 - 影音下載外部實際下載：會牽涉第三方網站、網路與 ffmpeg/yt-dlp 行為，暫不放入最小 smoke test。
 - 檔案上傳破壞性測試：目前先不寫入資料，後續可用自動清除策略補 integration test。
-- CSRF 強制啟用情境：目前 CSRF middleware 尚未恢復，需 P5 第二階段另建可開關測試。
+- CSRF 正式啟用情境：目前已建立 `ENABLE_CSRF_PROTECTION=True` 測試模式，但正式環境尚未啟用，仍需人工驗證登入、上傳、admin、會員、詩歌與使用者管理 AJAX。
 
 ## 執行方式
 
@@ -72,6 +73,34 @@ PowerShell：
 ```
 
 腳本會同時執行 `tests/smoke`、`tests/integration` 與 `tests/security`，且不連線 `.240`。
+
+## CSRF 測試模式
+
+P5 第三階段新增 CSRF 可開關測試。一般模式維持：
+
+```bash
+ENABLE_CSRF_PROTECTION=False
+```
+
+CSRF 復原測試模式使用：
+
+```bash
+ENABLE_CSRF_PROTECTION=True
+```
+
+Git Bash / WSL2 / Linux：
+
+```bash
+scripts/run-csrf-tests.sh
+```
+
+PowerShell：
+
+```powershell
+.\scripts\run-csrf-tests.ps1
+```
+
+此腳本只在測試容器內覆寫 `ENABLE_CSRF_PROTECTION=True`，不修改本機 `.env`，不連線 `.240`。正式啟用前仍需補齊 `accounts/user_list.html` AJAX CSRF header 並完成人工驗證。
 
 ## 未來如何擴充
 

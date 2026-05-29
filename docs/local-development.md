@@ -149,6 +149,33 @@ scripts/check-local.sh
 - production 部署前必須改為 `SESSION_COOKIE_SECURE=True` 與 `CSRF_COOKIE_SECURE=True`。
 - production 部署前必須設定正式 `ALLOWED_HOSTS` / `DJANGO_ALLOWED_HOSTS`。
 - production 部署前必須設定正式 HTTPS `CSRF_TRUSTED_ORIGINS`。
-- `DisableCSRFMiddleware` 目前仍存在，P5 第一階段只盤點不硬改，避免破壞既有登入、上傳與 admin 流程。
+- `ENABLE_CSRF_PROTECTION=False` 會維持目前相容模式並保留 `DisableCSRFMiddleware`。
+- `ENABLE_CSRF_PROTECTION=True` 會啟用 Django `CsrfViewMiddleware`，停用 `DisableCSRFMiddleware`，目前僅供本機 CSRF 測試模式使用。
 - `.env.production.example` 提供 production 樣板；目前 `.240` 若仍使用 HTTP，cookie secure 先維持 `False`，改 HTTPS 後必須調整為 `True`。
 - `UPLOAD_STRICT_MIME_CHECK=False` 為預設值；若改為 `True`，請先跑完整 smoke、integration、security tests。
+
+## CSRF 測試模式
+
+本機可用下列腳本驗證 CSRF 復原模式。腳本只在測試容器中覆寫 `ENABLE_CSRF_PROTECTION=True`，不修改 `.env`，不連線 `.240`。
+
+Git Bash / WSL2 / Linux：
+
+```bash
+scripts/run-csrf-tests.sh
+```
+
+PowerShell：
+
+```powershell
+.\scripts\run-csrf-tests.ps1
+```
+
+正式啟用 CSRF 前，需確認：
+
+1. csrf tests 通過。
+2. smoke tests 通過。
+3. 所有 POST form 都有 `{% csrf_token %}`。
+4. 所有 AJAX POST/PUT/PATCH/DELETE 都有 `X-CSRFToken`。
+5. 登入、上傳、admin、會員、詩歌人工測試通過。
+6. 已備份正式 DB 與 media。
+7. 已安排 rollback 方法，可回到 `ENABLE_CSRF_PROTECTION=False`。

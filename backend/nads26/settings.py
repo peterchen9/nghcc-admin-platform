@@ -50,6 +50,7 @@ DEBUG = env_bool('DJANGO_DEBUG', env_bool('DEBUG', False))
 ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', 'ALLOWED_HOSTS', default='localhost,127.0.0.1')
 
 CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', default='')
+ENABLE_CSRF_PROTECTION = env_bool('ENABLE_CSRF_PROTECTION', False)
 
 SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', False)
 CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', False)
@@ -86,16 +87,21 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'nads26.middleware.DisableCSRFMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'nads26.middleware.MenuPermissionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+if ENABLE_CSRF_PROTECTION:
+    MIDDLEWARE.insert(
+        MIDDLEWARE.index('django.contrib.auth.middleware.AuthenticationMiddleware'),
+        'django.middleware.csrf.CsrfViewMiddleware',
+    )
+else:
+    MIDDLEWARE.insert(0, 'nads26.middleware.DisableCSRFMiddleware')
 
 ROOT_URLCONF = 'nads26.urls'
 

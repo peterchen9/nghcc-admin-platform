@@ -126,8 +126,12 @@ scripts/check-local.sh
 - 第二階段已加入 `UPLOAD_STRICT_MIME_CHECK` MIME 輔助檢查開關。
 - 第二階段已建立 `.env.production.example`。
 - 第二階段已新增 security tests。
-- 後續仍需檢查 CSRF middleware。
-- 後續仍需在完整測試覆蓋後復原 CSRF middleware。
+- 第三階段已建立 `ENABLE_CSRF_PROTECTION` 開關。
+- 第三階段已保留 `DisableCSRFMiddleware` 作為相容模式，並可在測試模式啟用 Django `CsrfViewMiddleware`。
+- 第三階段已新增 `tests/security/test_csrf_behavior.py` 與 `scripts/run-csrf-tests.sh` / `scripts/run-csrf-tests.ps1`。
+- 第三階段已完成表單與 AJAX CSRF 盤點。
+- 後續仍需補強 `accounts/user_list.html` 使用者管理 AJAX 的 `X-CSRFToken`。
+- 後續仍需在所有人工測試通過後，才正式啟用 CSRF middleware。
 - 後續仍需評估 CKEditor / CMS / filer 上傳套件是否保留、停用或升級。
 - 後續仍需檢查登入與 session 設定。
 
@@ -137,3 +141,4 @@ scripts/check-local.sh
 - 上傳端點有副檔名、MIME、大小與路徑穿越防護。
 - secrets 只存在 `.env` 或主機環境，不進 Git。
 - production 部署前必須確認 HTTPS、`SESSION_COOKIE_SECURE=True`、`CSRF_COOKIE_SECURE=True`、正式 `ALLOWED_HOSTS`、正式 `CSRF_TRUSTED_ORIGINS`。
+- 移除或停用 `DisableCSRFMiddleware` 前，需通過 CSRF tests、smoke tests、POST/AJAX token 全盤點、登入/上傳/admin/會員/詩歌人工測試，並完成 DB/media 備份與 rollback 方法。
