@@ -17,6 +17,16 @@ function Invoke-Compose {
     & $ComposeCommand @Arguments
 }
 
+function Invoke-ComposeOutput {
+    param([string[]]$Arguments)
+
+    if ($ComposeCommand -eq "docker compose") {
+        return (& docker compose @Arguments 2>$null | Out-String)
+    }
+
+    return (& $ComposeCommand @Arguments 2>$null | Out-String)
+}
+
 function Assert-HttpOk {
     param(
         [string]$Name,
@@ -34,6 +44,24 @@ function Assert-HttpOk {
 
 Write-Host "Checking Docker Compose containers..."
 Invoke-Compose @("ps")
+
+if (-not (Test-Path ".env")) {
+    throw ".env does not exist."
+}
+
+if (-not (Test-Path "uploads")) {
+    throw "uploads directory does not exist."
+}
+
+$webStatus = Invoke-ComposeOutput @("ps", "web", "--status", "running")
+if ($webStatus -notmatch "nghcc-admin-web") {
+    throw "web container is not running."
+}
+
+$dbStatus = Invoke-ComposeOutput @("ps", "db")
+if ($dbStatus -notmatch "healthy") {
+    throw "db container is not healthy."
+}
 
 $web = Assert-HttpOk -Name "Web" -Url $WebUrl
 $healthResponse = Assert-HttpOk -Name "Health" -Url $HealthUrl
