@@ -25,6 +25,13 @@
 | --- | --- |
 | `tests/integration/test_readonly_api.py` | `/api/health/`、`/api/hymns/`、`/users/routes/` 的唯讀行為 |
 
+## 納入 Security Test 的功能
+
+| 測試檔 | 驗證內容 |
+| --- | --- |
+| `tests/security/test_upload_validation.py` | 上傳副檔名、大小、檔名清理、MIME strict mode、Eureka 不合法照片不建立資料 |
+| `tests/security/test_security_settings.py` | DEBUG、ALLOWED_HOSTS、cookie/security settings 可由環境變數控制 |
+
 ## 尚未測試的功能
 
 - 奉獻、財會、課程教育、報表：目前未在 admin-platform 內完整實作。
@@ -64,7 +71,7 @@ PowerShell：
 .\scripts\run-smoke-tests.ps1
 ```
 
-腳本會同時執行 `tests/smoke` 與 `tests/integration`，且不連線 `.240`。
+腳本會同時執行 `tests/smoke`、`tests/integration` 與 `tests/security`，且不連線 `.240`。
 
 ## 未來如何擴充
 

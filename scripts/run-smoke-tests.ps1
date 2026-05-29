@@ -55,7 +55,7 @@ Invoke-Compose (Get-ComposeArgs @(
     "-e", "TEST_PASSWORD_SECONDARY",
     "-e", "TEST_ADMIN_USERNAME",
     "-e", "TEST_ADMIN_PASSWORD",
-    "web", "pytest", "tests/smoke", "tests/integration"
+    "web", "pytest", "tests/smoke", "tests/integration", "tests/security"
 ))
 
-Write-Host "Smoke and read-only integration tests completed successfully."
+Write-Host "Smoke, read-only integration, and security tests completed successfully."

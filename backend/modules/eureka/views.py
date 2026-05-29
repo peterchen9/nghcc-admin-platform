@@ -8,10 +8,12 @@ from django.conf import settings
 from django.db.models import Q, Max, Count
 from django.contrib import messages
 from openpyxl import Workbook
+from nads26.upload_validation import UploadValidationError, validate_uploaded_file
 from .models import Member
 
 # 照片目錄路徑
 PHOTO_FOLDER = os.path.join(settings.MEDIA_ROOT, 'eureka', 'photo')
+EUREKA_PHOTO_ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 
 VARIANT_MAP = {'峰': '峰峯', '峯': '峰峯', '群': '群羣', '羣': '群羣'}
 
@@ -466,7 +468,18 @@ def add_view(request):
             
         join_date = parse_roc_date(request.POST.get('joindate', ''))
         dataindate = parse_roc_date(request.POST.get('dataindate', ''))
-        
+
+        photo_file = request.FILES.get('photo')
+        if photo_file:
+            try:
+                validate_uploaded_file(
+                    photo_file,
+                    allowed_extensions=EUREKA_PHOTO_ALLOWED_EXTENSIONS,
+                )
+            except UploadValidationError as exc:
+                messages.error(request, str(exc))
+                return redirect('eureka:add')
+
         new_m = Member.objects.create(
             church_id=new_church_id,
             name=name,
@@ -488,8 +501,7 @@ def add_view(request):
             line_id=request.POST.get('reserved3', '').strip(),
             presence=0
         )
-        
-        photo_file = request.FILES.get('photo')
+
         if photo_file:
             photo_dir = os.path.join(settings.MEDIA_ROOT, 'eureka', 'photo')
             os.makedirs(photo_dir, exist_ok=True)

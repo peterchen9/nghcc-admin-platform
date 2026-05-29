@@ -121,10 +121,15 @@ scripts/check-local.sh
 - 第一階段已建立 `nads26.upload_validation` helper。
 - 第一階段只套用到詩歌上傳；Eureka 照片與 CKEditor 上傳先盤點未硬改。
 - 第一階段已新增 read-only API integration tests。
+- 第二階段已完成 CSRF 盤點與復原策略文件。
+- 第二階段已將 Eureka 照片上傳套用共用 upload validation helper。
+- 第二階段已加入 `UPLOAD_STRICT_MIME_CHECK` MIME 輔助檢查開關。
+- 第二階段已建立 `.env.production.example`。
+- 第二階段已新增 security tests。
 - 後續仍需檢查 CSRF middleware。
-- 後續仍需檢查 upload MIME type。
+- 後續仍需在完整測試覆蓋後復原 CSRF middleware。
+- 後續仍需評估 CKEditor / CMS / filer 上傳套件是否保留、停用或升級。
 - 後續仍需檢查登入與 session 設定。
-- 後續仍需檢查 CKEditor 4 與相關上傳套件的維護狀態。
 
 驗收條件：
 

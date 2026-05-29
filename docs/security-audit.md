@@ -78,3 +78,59 @@
 2. 尚未強制 MIME type 檢查；MIME 第一階段只記錄 TODO，後續應用檔案內容判斷。
 3. 尚未變更 Eureka 新朋友照片上傳流程。
 4. 尚未變更 CKEditor uploader 設定。
+
+## CSRF 專章
+
+### 掃描結果
+
+| 項目 | 結果 |
+| --- | --- |
+| `csrf_exempt` | `modules.humnos.views` 有 import，但未見 `@csrf_exempt` 實際使用 |
+| `CsrfViewMiddleware` | `settings.py` 中目前註解 |
+| `DisableCSRFMiddleware` | 已啟用，會設定 `_dont_enforce_csrf_checks=True` |
+| `CSRF_TRUSTED_ORIGINS` | 已環境變數化 |
+| HTML 表單 csrf token | `base.html`、`eureka/add.html`、`eureka/neos.html` 可見 `{% csrf_token %}` |
+| AJAX CSRF header | `hymns_page.html`、`humnos_page.html` 會送 `X-CSRFToken` |
+
+### Endpoint 風險
+
+| Endpoint | 寫入/敏感性 | 目前 CSRF 狀態 | 風險 | 復原注意事項 |
+| --- | --- | --- | --- | --- |
+| `/admin/` | 高 | 標準 middleware 被停用，但 Django admin 表單本身有 token | 高 | 第一個復原驗證對象 |
+| `/users/create/`、`/users/<id>/...` | 高 | DRF API + 登入/superuser | 高 | 需補 CSRF 或改成 token API 策略 |
+| `/api/hymns/` POST/PUT/DELETE/upload | 中高 | AJAX 已送 CSRF header，但 middleware 停用 | 中高 | 可先在本機用 smoke + 上傳測試驗證 |
+| `/eureka/add/`、`/eureka/modify/delete/...` | 高 | 表單有 csrf token，但 middleware 停用 | 高 | 需測新朋友登記、刪除流程 |
+| `/api/humnos/info/`、`/api/humnos/download/` | 中 | AJAX 已送 CSRF header | 中 | 影音下載依賴外部服務，需 mock 或人工測 |
+| `/api/health/` | 低 | GET only | 低 | 不需 CSRF |
+
+### 是否仍必要
+
+目前沒有證據顯示 `DisableCSRFMiddleware` 必須長期保留。較可能是為了快速移植舊系統、讓 AJAX/表單在整合期間先可用。因為它影響所有寫入 endpoint，本階段不直接移除，避免破壞登入、admin、CKEditor、詩歌與 Eureka 表單。
+
+### 建議復原順序
+
+1. 新增環境變數開關，例如 `DISABLE_CSRF_CHECKS=True/False`。
+2. 預設本機仍維持現況，新增一套 `CSRF_ENABLED=1` 測試設定。
+3. 先讓 `/admin/`、`/api/hymns/`、`/eureka/add/` 的測試覆蓋 CSRF enabled 情境。
+4. 確認 AJAX header 與表單 token 都正常後，在本機關閉 `DisableCSRFMiddleware`。
+5. 正式部署前才移除或停用 `DisableCSRFMiddleware`。
+
+## CKEditor / CMS / filer 上傳盤點
+
+| 項目 | Endpoint / 來源 | 套件 | Size limit | Extension allowlist | MIME check | 可套 helper | 建議 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| CKEditor 上傳 | `/ckeditor/upload/` | `django-ckeditor` / `ckeditor_uploader` | 未在本 repo 明確設定 | 未在本 repo 明確設定 | 未在本 repo 明確設定 | 不建議直接改第三方內部流程 | 保留但限制使用權限，後續評估套件維護狀態與設定 |
+| CMS tables | `cms_*` tables | 舊 Django CMS 殘留資料表 | 不明 | 不明 | 不明 | 不適用 | 多數 0 筆，先保留資料庫相容性，後續評估移除 |
+| filer tables | `filer_*` tables | 舊 filer 殘留資料表 | 不明 | 不明 | 不明 | 不適用 | 多數 0 筆，先保留資料庫相容性，後續評估移除 |
+| Page content upload | `RichTextUploadingField` | CKEditor uploader | 同 CKEditor | 同 CKEditor | 同 CKEditor | 不建議直接改第三方內部流程 | 先文件化 |
+
+## 第二階段已完成
+
+| 項目 | 狀態 |
+| --- | --- |
+| CSRF 掃描 | 已完成，未直接復原 middleware |
+| Eureka 照片上傳 | 已套用 `upload_validation` helper，限制大小、副檔名與檔名安全；仍保留 `<church_id>.jpg` 儲存規則 |
+| MIME 輔助檢查 | 已加入 `mimetypes` 輔助檢查，可用 `UPLOAD_STRICT_MIME_CHECK` 開關 |
+| CKEditor/CMS/filer | 只盤點與文件化，未改第三方流程 |
+| production env 樣板 | 已新增 `.env.production.example` |
+| security tests | 已新增 `tests/security/test_upload_validation.py` 與 `tests/security/test_security_settings.py` |

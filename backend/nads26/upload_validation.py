@@ -1,5 +1,6 @@
 import os
 import re
+import mimetypes
 from dataclasses import dataclass
 
 from django.conf import settings
@@ -14,6 +15,7 @@ class ValidatedUpload:
     original_name: str
     safe_name: str
     extension: str
+    guessed_mime_type: str
 
 
 def _clean_filename(filename):
@@ -35,11 +37,31 @@ def _normalize_extensions(extensions):
     }
 
 
+def _mime_type_matches_extension(extension, content_type):
+    expected_type, _encoding = mimetypes.guess_type(f'upload.{extension}')
+    if not expected_type or not content_type:
+        return True
+
+    content_type = content_type.split(';', 1)[0].strip().lower()
+    expected_type = expected_type.lower()
+
+    aliases = {
+        'jpg': {'image/jpeg', 'image/pjpeg'},
+        'jpeg': {'image/jpeg', 'image/pjpeg'},
+        'htm': {'text/html', 'application/octet-stream'},
+        'html': {'text/html', 'application/octet-stream'},
+        'mid': {'audio/midi', 'audio/x-midi', 'audio/mid', 'application/octet-stream'},
+        'midi': {'audio/midi', 'audio/x-midi', 'audio/mid', 'application/octet-stream'},
+    }
+    accepted = aliases.get(extension, {expected_type})
+    return content_type in accepted
+
+
 def validate_uploaded_file(uploaded_file, allowed_extensions=None, max_size_mb=None):
     """驗證上傳檔案大小與副檔名，並回傳安全檔名。
 
-    MIME type 第一階段先不硬性阻擋，因為瀏覽器與用戶端提供的 content_type
-    容易被偽造；後續應改由檔案內容 sniffing 或專用函式庫判斷。
+    MIME type 只作輔助檢查，因為瀏覽器與用戶端提供的 content_type
+    容易被偽造；嚴格阻擋需由 UPLOAD_STRICT_MIME_CHECK 開啟。
     """
     if not uploaded_file:
         raise UploadValidationError('未提供檔案。')
@@ -61,8 +83,15 @@ def validate_uploaded_file(uploaded_file, allowed_extensions=None, max_size_mb=N
     if uploaded_file.size > max_size:
         raise UploadValidationError(f'檔案大小超過限制：最大 {limit_mb} MB。')
 
+    guessed_mime_type, _encoding = mimetypes.guess_type(safe_name)
+    if settings.UPLOAD_STRICT_MIME_CHECK:
+        content_type = getattr(uploaded_file, 'content_type', '')
+        if not _mime_type_matches_extension(extension, content_type):
+            raise UploadValidationError('檔案 MIME type 與副檔名不一致，請確認檔案格式。')
+
     return ValidatedUpload(
         original_name=uploaded_file.name,
         safe_name=safe_name,
         extension=extension,
+        guessed_mime_type=guessed_mime_type or '',
     )

@@ -150,3 +150,5 @@ scripts/check-local.sh
 - production 部署前必須設定正式 `ALLOWED_HOSTS` / `DJANGO_ALLOWED_HOSTS`。
 - production 部署前必須設定正式 HTTPS `CSRF_TRUSTED_ORIGINS`。
 - `DisableCSRFMiddleware` 目前仍存在，P5 第一階段只盤點不硬改，避免破壞既有登入、上傳與 admin 流程。
+- `.env.production.example` 提供 production 樣板；目前 `.240` 若仍使用 HTTP，cookie secure 先維持 `False`，改 HTTPS 後必須調整為 `True`。
+- `UPLOAD_STRICT_MIME_CHECK=False` 為預設值；若改為 `True`，請先跑完整 smoke、integration、security tests。

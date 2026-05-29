@@ -62,6 +62,7 @@ UPLOAD_ALLOWED_EXTENSIONS = env_list(
     'UPLOAD_ALLOWED_EXTENSIONS',
     default='jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx',
 )
+UPLOAD_STRICT_MIME_CHECK = env_bool('UPLOAD_STRICT_MIME_CHECK', False)
 
 
 # Application definition
