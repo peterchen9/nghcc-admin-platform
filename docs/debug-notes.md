@@ -253,3 +253,21 @@ WHERE username IN ('peterchen', 'abcde', 'emily');
 - `.240` 啟用選單資料仍存在，`menu_menuitem` 有 23 筆啟用資料。
 - `.240` 有些帳號沒有選單權限，例如 `abcde` 的權限數為 0，因此畫面會只剩首頁。
 - `.240` 在 2026-05-29 10:28-10:32 曾偵測到遠端檔案變更並自動 reload，該現象不是本機修正造成。
+
+## 2026-05-29 本機修正：左側目錄與 `.240` 對齊
+
+### 差異
+
+比對 `.240` 與本機左側目錄後，發現本機少了 `.240` 的兩個「管理員」子項目：
+
+- `首頁內容編輯`：`/pages/edit-home/`
+- `選單項目管理`：`/admin/menu/menuitem/`
+
+另外，本機的 `使用者管理` 原本是獨立根目錄；`.240` 是放在 `管理員` 底下。
+
+### 本機修正
+
+- 更新 `backend/scripts/init_menu.py`，使本機選單 seed 完整對齊 `.240`。
+- 新增 `backend/modules/menu/fixtures/menu_items.json`，保留可用 `loaddata` 重建的選單 fixture。
+- 本機資料庫已同步為 `.240` 的 23 筆啟用選單結構。
+- 本機 `peterchen` 已設定密碼，並複製 `peter` 的 superuser/staff 權限與完整選單權限。

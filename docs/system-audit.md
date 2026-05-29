@@ -301,3 +301,18 @@ yt-dlp
 ### 本機額外修正
 
 - 新增使用者預設套用所有啟用選單，避免可以登入但左側只剩「首頁」。
+
+## 2026-05-29 左側目錄最終對齊
+
+本機左側目錄已依 `.240` 目前資料補齊為 23 筆啟用選單，其中 `管理員` 底下包含：
+
+- `首頁內容編輯`：`/pages/edit-home/`
+- `使用者管理`：`/users/`
+- `選單項目管理`：`/admin/menu/menuitem/`
+
+可重建來源：
+
+- `backend/scripts/init_menu.py`
+- `backend/modules/menu/fixtures/menu_items.json`
+
+本機帳號 `peterchen` 已複製 `peter` 的 staff/superuser 狀態與完整選單權限，用於本機作業測試。
