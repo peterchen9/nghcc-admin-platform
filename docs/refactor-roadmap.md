@@ -67,6 +67,12 @@ scripts/check-local.sh
 
 目標：讓登入權限、功能權限與左側選單可見性一致。
 
+- 第一階段已完成權限模型盤點文件 `docs/permission-audit.md`。
+- 第一階段已完成權限矩陣草案 `docs/permission-matrix.md`。
+- 第一階段已完成 URL 權限地圖 `docs/url-permission-map.md`。
+- 第一階段已新增唯讀盤點腳本 `scripts/audit-permissions.sh` / `scripts/audit-permissions.ps1`。
+- 第一階段已新增 permission visibility tests。
+- 第一階段尚未做任何權限重構。
 - 盤點 Django permission。
 - 盤點 group permission。
 - 盤點 user permission。
@@ -79,6 +85,8 @@ scripts/check-local.sh
 
 - 每個自訂 URL 都有明確權限需求。
 - 選單可見不代表可操作的風險被消除或記錄。
+- 下一步只建議小步修補高風險 URL 權限，例如公開 HTM resource、登入即可直接打 URL 的 menu permission 差異、使用者管理 AJAX CSRF header。
+- 不建議一次性重建權限模型，避免影響登入、左側選單、admin 與既有資料。
 
 ## P3：測試補強
 
