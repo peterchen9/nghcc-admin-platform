@@ -1,0 +1,26 @@
+name: Smoke Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  smoke-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Docker version
+        run: docker version
+
+      - name: Build containers
+        run: docker compose -f docker-compose.yml -f docker-compose.volume.yml build
+
+      - name: Smoke test placeholder
+        run: |
+          echo "Smoke test CI scaffold is ready."
+          echo "Full CI requires a sanitized DB fixture and media fixture."
