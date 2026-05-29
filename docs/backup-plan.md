@@ -146,7 +146,7 @@ rsync -avh --progress peter@192.168.16.240:/home/peter/backups/nghcc-admin-platf
 ## 本機還原準備
 
 1. 解壓 `nads26-source-<BACKUP_TS>.tar.gz` 到暫存資料夾，將舊系統內容整理進 `backend/`。
-2. 解壓 `nads26-media-<BACKUP_TS>.tar.gz`，將 `media/` 內容放入本機專案 `uploads/`。
+2. 先驗證 checksum，確認 DB dump、media tar 與程式備份檔沒有下載損壞。
 3. 啟動本機 Docker：
 
 ```bash
@@ -157,14 +157,52 @@ docker compose up -d --build
 4. 匯入資料庫：
 
 ```bash
-gzip -dc backups/192.168.16.240/<BACKUP_TS>/nads26db-<BACKUP_TS>.sql.gz \
-  | docker exec -i nghcc-admin-db mysql -unghcc_admin -pchange_me_password nghcc_admin
+YES=1 scripts/restore-db.sh backups/192.168.16.240/<BACKUP_TS>/nads26db-<BACKUP_TS>.sql.gz
 ```
 
-5. 驗證：
+5. 還原 media。正式資料還原建議優先使用 Docker named volume 或 Linux/WSL2 filesystem：
+
+```bash
+scripts/restore-media-to-volume.sh backups/192.168.16.240/<BACKUP_TS>/nads26-media-<BACKUP_TS>.tar.gz
+```
+
+若只是一般 Windows 開發，也可以使用 bind mount `uploads/`，但中文檔名可能遇到相容性問題：
+
+```bash
+tar -xzf backups/192.168.16.240/<BACKUP_TS>/nads26-media-<BACKUP_TS>.tar.gz -C uploads --strip-components=1
+```
+
+6. 驗證：
 
 ```bash
 docker compose ps
 docker compose logs --tail=100
 curl http://localhost:26001/api/health/
 ```
+
+## Checksum 驗證流程
+
+本機下載備份後，先執行：
+
+```bash
+scripts/verify-backup-checksum.sh backups/192.168.16.240/<BACKUP_TS>
+```
+
+此腳本會讀取 `SHA256SUMS-<BACKUP_TS>.txt`，並驗證同資料夾內的 DB dump、media tar、project tar、compose 與 env 備份。若 checksum 失敗，不可進行還原，應重新下載備份檔。
+
+## Media 完整性與 Windows bind mount 風險
+
+正式備份 `nads26-media-20260529-134006.tar.gz` 內有 `33827` 個一般檔案。先前在 Windows bind mount `uploads/` 解壓時只得到 `33812` 個檔案，缺少 15 個中文檔名照片。這通常不是正式主機資料遺失，而是 Windows 檔案系統、Docker Desktop bind mount、tar 工具或中文檔名編碼在跨系統處理時的相容性風險。
+
+建議：
+
+1. 正式還原與完整性驗證使用 Linux/WSL2 filesystem 或 Docker named volume。
+2. 本機 Windows bind mount 只作日常開發，不作唯一的 media 完整性依據。
+3. 每次還原後都執行完整性檢查：
+
+```bash
+scripts/check-media-integrity.sh volume nghcc-admin-media-data
+scripts/check-media-integrity.sh uploads uploads
+```
+
+named volume 達到 `33827` 個檔案才視為 media 還原完整。Windows bind mount 若仍為 `33812`，應記錄為本機 bind mount 限制，不應推論正式備份缺檔。

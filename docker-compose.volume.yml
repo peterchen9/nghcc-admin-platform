@@ -1,0 +1,9 @@
+services:
+  web:
+    volumes:
+      - nghcc-admin-media-data:/app/media
+
+volumes:
+  nghcc-admin-media-data:
+    name: nghcc-admin-media-data
+    external: true

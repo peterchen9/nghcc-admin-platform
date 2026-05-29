@@ -1,6 +1,11 @@
 #!/usr/bin/env sh
 set -eu
 
+if [ -d /usr/bin ]; then
+  PATH="/usr/bin:/bin:$PATH"
+  export PATH
+fi
+
 WEB_URL="${WEB_URL:-http://localhost:26001/}"
 HEALTH_URL="${HEALTH_URL:-http://localhost:26001/api/health/}"
 COMPOSE="${COMPOSE:-docker compose}"

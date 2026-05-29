@@ -20,12 +20,33 @@
 - 確認備份與還原流程可重複執行。
 - 將缺漏 media 清單固定記錄，避免後續誤判為正式資料遺失。
 - 將還原流程整理成可重跑腳本，並保留執行紀錄。
+- 新增 `docker-compose.volume.yml`，讓本機可選擇 `nghcc-admin-media-data` named volume。
+- 新增 `scripts/restore-media-to-volume.sh`，使用 temporary container 在 Linux filesystem 內解壓 media。
+- 新增 `scripts/restore-db.sh`，依 `.env` 匯入本機 DB 並檢查 52 tables。
+- 新增 `scripts/verify-backup-checksum.sh`，驗證備份資料夾內 checksum。
+- 新增 `scripts/check-media-integrity.sh`，支援 bind mount 與 named volume 檔案數檢查。
 
 驗收條件：
 
 - media 檔案數與 tar 內檔案數一致。
 - DB 匯入後 tables、users、menus、permissions 數量一致。
 - `scripts/check-local.ps1` 與 `scripts/check-local.sh` 均可通過。
+- named volume media 檔案數達到 `33827`。
+- Windows bind mount 若仍缺 15 個中文檔名照片，需保留為已知限制並改用 volume 作為完整還原結果。
+
+P0 操作順序：
+
+```bash
+BACKUP_TS=20260529-134006
+BACKUP_DIR=backups/192.168.16.240/$BACKUP_TS
+
+scripts/verify-backup-checksum.sh "$BACKUP_DIR"
+YES=1 scripts/restore-db.sh "$BACKUP_DIR/nads26db-$BACKUP_TS.sql.gz"
+scripts/restore-media-to-volume.sh "$BACKUP_DIR/nads26-media-$BACKUP_TS.tar.gz"
+scripts/check-media-integrity.sh volume nghcc-admin-media-data
+docker compose -f docker-compose.yml -f docker-compose.volume.yml up -d --build
+scripts/check-local.sh
+```
 
 ## P1：系統邊界釐清
 
