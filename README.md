@@ -1,18 +1,23 @@
 # 北門行政作業平台
 
-## 專案說明
-
-這是教會系統專案之一，用於北門行政作業管理。
-
-本 repository 名稱統一為 `nghcc-admin-platform`，Docker Compose project name 也固定使用 `nghcc-admin-platform`。
+這是教會系統專案之一，用於北門行政作業管理。此 repository 名稱統一為 `nghcc-admin-platform`。
 
 ## 技術架構
 
-- Frontend：Nginx reverse proxy
-- Backend：Python 3.11、Django 5、Gunicorn，程式結構沿用舊系統 `nads26/`、`modules/`、`templates/`
+- Backend：Python 3.11、Django 5、Gunicorn
 - Database：MySQL 8
 - Container：Docker Compose
-- 持久化資料：MySQL volume、`uploads/`
+- uploads/media：本機 `uploads/` 掛載到 container `/app/media`
+- 舊系統來源：`192.168.16.240:/home/apps1/nads26`
+
+## Docker 命名
+
+- Docker Compose project：`nghcc-admin-platform`
+- web container：`nghcc-admin-web`
+- db container：`nghcc-admin-db`
+- database name：`nghcc_admin`
+- local web port：`26001`
+- internal web port：`8000`
 
 ## 本機啟動方式
 
@@ -21,18 +26,18 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-若本機 Docker CLI 尚未啟用 `docker compose` 子指令，可暫時使用：
+Windows 若 `docker compose` 不可用，可改用：
 
 ```bash
 docker-compose up -d --build
 ```
 
-## 本機服務
+## 本機網址
 
-- Frontend：http://localhost:26001
-- Backend health：http://localhost:26002/api/health/
-- Django Admin：http://localhost:26001/admin/
-- MySQL：localhost:26003
+- Web：`http://localhost:26001`
+- Health：`http://localhost:26001/api/health/`
+- Django Admin：`http://localhost:26001/admin/`
+- MySQL：`localhost:26003`
 
 ## 常用指令
 
@@ -43,30 +48,18 @@ docker compose restart
 docker compose down
 ```
 
-## 本機健康檢查與備份
+## 本機檢查
 
 ```powershell
 .\scripts\check-local.ps1
-.\scripts\backup-db.ps1
-.\scripts\backup-uploads.ps1
 ```
-
-## 目前本機測試狀態
-
-2026-05-28 已完成本機 Docker 測試：
-
-- `nghcc-admin-frontend` 可啟動並回傳 `200 text/html`
-- `nghcc-admin-backend` 可啟動，`/api/health/` 回傳 database `ok`
-- `nghcc-admin-db` 可啟動並通過 healthcheck
-- `uploads/` 經容器重啟後仍保留測試檔案
-- MySQL named volume 經容器重啟後仍可正常連線
-- 已匯入舊系統 MySQL dump，本機首頁可顯示舊系統介面與選單資料
 
 ## 文件
 
-- [既有系統盤點](docs/system-audit.md)
+- [192.168.16.240 伺服器盤點](docs/server-audit-192.168.16.240.md)
+- [備份方案](docs/backup-plan.md)
 - [本機開發](docs/local-development.md)
 - [部署說明](docs/deployment.md)
-- [備份與還原](docs/backup-and-restore.md)
-- [維運檢查清單](docs/operations-checklist.md)
+- [遷移紀錄](docs/migration-notes.md)
+- [既有系統盤點](docs/system-audit.md)
 - [除錯紀錄](docs/debug-notes.md)
