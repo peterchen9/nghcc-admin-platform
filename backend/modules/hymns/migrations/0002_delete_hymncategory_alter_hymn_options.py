@@ -10,10 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            sql="SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS hymn; SET FOREIGN_KEY_CHECKS = 1;",
-            reverse_sql=""
-        ),
         migrations.RemoveField(
             model_name='hymn',
             name='category',
@@ -26,5 +22,4 @@ class Migration(migrations.Migration):
             options={'managed': False, 'ordering': ['id'], 'verbose_name': '詩歌', 'verbose_name_plural': '詩歌'},
         ),
     ]
-
 
