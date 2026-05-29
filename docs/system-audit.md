@@ -268,3 +268,36 @@ yt-dlp
 - `docs/`：盤點、開發、部署與除錯文件
 
 資料庫已調整為 MySQL 8，以貼近舊系統 `nads26db`，降低後續資料遷移成本。
+## 2026-05-29 本機與 `.240` 補比對紀錄
+
+### 比對範圍
+
+- 遠端來源：`192.168.16.240:/home/apps1/nads26`
+- 本機位置：`nghcc-admin-platform/backend`
+- 排除資料：`.env`、`db.sqlite3`、`mysql_data/`、`media/`、`.git/`、`__pycache__/`、`*.pyc`
+- 遠端檢查方式：SSH/SFTP 唯讀下載與 hash 比對，未修改 `.240`
+
+### 本機已補齊
+
+- `backend/modules/pages/migrations/0002_alter_page_content.py`
+- `backend/nads26/nads26.code-workspace`
+- `backend/.dockerignore`
+- `backend/docker-compose.legacy.example.yml`
+
+### 不直接照抄的遠端內容
+
+- `.240` 的舊 `docker-compose.yml` 含有明碼資料庫密碼，因此本機只保留去密碼版 `docker-compose.legacy.example.yml` 供盤點比對。
+- `.240` 的同步腳本含有明碼密碼，本機維持環境變數版，避免把密碼提交到 GitHub。
+- 本機保留新 Docker 架構必要設定：Gunicorn、MySQL 環境變數、`/api/health/` 健康檢查、`nghcc-admin-*` container name。
+
+### 已合併的遠端功能差異
+
+- 首頁編輯入口 `/pages/edit-home/`
+- `Page.content` 改用 `RichTextUploadingField`
+- CKEditor 圖片上傳相關設定
+- 未登入時的登入連結導向 `/admin/login/?next=/`
+- 非 superuser 進入 `/admin/` 內頁時導回首頁
+
+### 本機額外修正
+
+- 新增使用者預設套用所有啟用選單，避免可以登入但左側只剩「首頁」。

@@ -165,7 +165,21 @@ CKEDITOR_CONFIGS = {
         'toolbar': 'full',
         'height': 400,
         'width': '100%',
+        'extraPlugins': ','.join([
+            'uploadimage',
+            'clipboard',
+            'dialog',
+            'dialogui',
+            'lineutils',
+            'widget',
+            'notification',
+            'notificationaggregator',
+            'filetools',
+        ]),
     },
 }
+
+LOGIN_REDIRECT_URL = '/'
+LOGIN_URL = '/admin/login/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

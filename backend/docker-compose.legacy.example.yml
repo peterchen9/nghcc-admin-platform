@@ -1,0 +1,31 @@
+# 舊系統原始 Docker Compose 範本，僅供比對與盤點使用。
+# 實際部署請使用專案根目錄的 docker-compose.yml。
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: nads26db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${LEGACY_MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: nads26db
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: ${LEGACY_MYSQL_PASSWORD}
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+    ports:
+      - "33069:3306"
+    restart: always
+
+  web:
+    build: .
+    container_name: nads26-web
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "26001:8000"
+    depends_on:
+      - db
+    env_file:
+      - .env
+    restart: always

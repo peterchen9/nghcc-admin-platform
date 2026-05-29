@@ -229,3 +229,27 @@ UPDATE auth_user
 SET is_staff = 1
 WHERE username IN ('peterchen', 'abcde', 'emily');
 ```
+
+## 2026-05-29 本機修正：新增使用者登入後只剩首頁
+
+### 問題原因
+
+本機與 `.240` 的舊系統都使用 `accounts_userprofile_allowed_menu_items` 控制非 superuser 的左側選單。新增使用者若只有 `is_staff=True`，只能登入 Django Admin 或後台頁面；若沒有任何 `allowed_menu_items`，登入後左側仍會只看到固定的「首頁」。
+
+### 本機修正
+
+- `backend/modules/accounts/views.py`
+  - 新增使用者時，若未另外指定權限，會自動套用所有啟用中的 `MenuItem`。
+  - 設定權限時只接受 list 格式，並只寫入啟用中的選單項目。
+- `backend/modules/pages/`
+  - 補齊 `.240` 已出現的首頁編輯入口與 CKEditor 上傳欄位 migration。
+- `backend/templates/base.html`
+  - 補齊 `.240` 的登入 `next=/` 與首頁快速連結 CSS。
+
+### `.240` 比對結果
+
+本次對 `.240` 僅做唯讀比對，沒有修改遠端檔案、資料庫或 container。
+
+- `.240` 啟用選單資料仍存在，`menu_menuitem` 有 23 筆啟用資料。
+- `.240` 有些帳號沒有選單權限，例如 `abcde` 的權限數為 0，因此畫面會只剩首頁。
+- `.240` 在 2026-05-29 10:28-10:32 曾偵測到遠端檔案變更並自動 reload，該現象不是本機修正造成。

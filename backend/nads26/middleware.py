@@ -17,11 +17,14 @@ class MenuPermissionMiddleware:
     def __call__(self, request):
         path = request.path
         
-        # 1. Skip system paths, static files, uploads, and admin panels
+        # 1. Skip system paths, static files, uploads, and admin login/logout pages.
         if (path.startswith('/admin/') or 
             path.startswith('/ckeditor/') or 
             path.startswith('/static/') or 
             path.startswith('/media/')):
+            if path.startswith('/admin/') and not path.startswith('/admin/login/') and not path.startswith('/admin/logout/') and request.user.is_authenticated and not request.user.is_superuser:
+                from django.shortcuts import redirect
+                return redirect('/')
             return self.get_response(request)
 
         # 2. Skip home page, accounts auth paths, and user management (handled inside views)
@@ -57,4 +60,3 @@ class MenuPermissionMiddleware:
                     raise PermissionDenied("您無權存取此頁面。")
 
         return self.get_response(request)
-

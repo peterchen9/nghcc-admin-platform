@@ -8,6 +8,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from modules.menu.models import MenuItem
 
+def _active_menu_items():
+    return MenuItem.objects.filter(is_active=True)
+
 def admin_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated or not request.user.is_superuser:
@@ -78,6 +81,7 @@ def user_create(request):
     profile.display_name = display_name
     profile.department = department
     profile.role = role
+    profile.allowed_menu_items.set(_active_menu_items())
     profile.save()
 
     return Response({'status': 'success', 'user_id': user.id})
@@ -128,9 +132,11 @@ def user_set_permissions(request, pk):
         
     user = get_object_or_404(User, pk=pk)
     menu_ids = request.data.get('menu_ids', [])
+    if not isinstance(menu_ids, list):
+        return Response({'error': '選單權限格式錯誤。'}, status=400)
     
     profile = user.profile
-    valid_menu_items = MenuItem.objects.filter(id__in=menu_ids)
+    valid_menu_items = MenuItem.objects.filter(id__in=menu_ids, is_active=True)
     profile.allowed_menu_items.set(valid_menu_items)
     profile.save()
 

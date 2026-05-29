@@ -55,6 +55,7 @@
             font-weight: 700;
             background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: -1px;
         }
@@ -236,6 +237,49 @@
                 transform: translateX(0);
             }
         }
+        /* 首頁快速連結區塊 */
+        .quick-links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .quick-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 24px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 12px;
+        }
+
+        .quick-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-color);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .quick-card .icon {
+            font-size: 2.5rem;
+        }
+
+        .quick-card .title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .quick-card .desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -304,7 +348,7 @@
                             </form>
                         </div>
                     {% else %}
-                        <a href="/admin/login/" style="color: var(--accent-color); text-decoration: none;">登入</a>
+                        <a href="/admin/login/?next=/" style="color: var(--accent-color); text-decoration: none;">登入</a>
                     {% endif %}
                 </div>
             </header>
