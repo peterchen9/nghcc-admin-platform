@@ -1,26 +1,15 @@
 # 部署說明
 
-目標正式部署主機：`192.168.16.240`  
-正式服務 port：`26001`  
-Compose project name：`nghcc-admin-platform`
+目標 repository：`nghcc-admin-platform`  
+Docker Compose project：`nghcc-admin-platform`
 
 ## 部署前檢查
 
-正式部署前需先完成：
-
-- 本機 `docker compose up -d --build` 成功
-- `frontend`、`backend`、`db` 容器狀態正常
-- `GET /api/health/` 回傳 database `ok`
-- `uploads/` 重啟後資料保留
-- MySQL volume 重啟後資料保留
-- 已備份舊系統原始碼與資料庫
-- 已確認舊系統部署路徑與啟動方式
-
-## 容器命名
-
-- `nghcc-admin-frontend`
-- `nghcc-admin-backend`
-- `nghcc-admin-db`
+1. 已完成 `.240` 備份。
+2. 已備份 DB dump、media、程式目錄、`docker-compose.yml`、`.env`。
+3. 已在本機用相同備份完成還原測試。
+4. 已確認 `.env` 使用正式密碼與正式 `DJANGO_SECRET_KEY`。
+5. 已確認 `DJANGO_DEBUG=0`。
 
 ## 建議部署流程
 
@@ -28,31 +17,55 @@ Compose project name：`nghcc-admin-platform`
 git clone https://github.com/peterchen9/nghcc-admin-platform.git
 cd nghcc-admin-platform
 cp .env.example .env
+```
+
+編輯 `.env` 後啟動：
+
+```bash
 docker compose up -d --build
 docker compose ps
-docker compose logs -f
+docker compose logs --tail=100
 ```
 
-## 正式環境注意事項
+## 正式環境 Docker 名稱
 
-- `.env` 不可提交到 Git。
-- `DJANGO_SECRET_KEY`、`JWT_SECRET`、`SESSION_SECRET` 必須改為正式亂數。
-- `DB_PASSWORD`、`DB_ROOT_PASSWORD` 必須改為正式亂數。
-- `DJANGO_DEBUG` 正式環境應設定為 `0`。
-- `DJANGO_ALLOWED_HOSTS` 需包含正式 IP 或網域。
-- 若要替換既有 `26001` 服務，需先確認舊服務已完整備份並安排停機窗口。
+- web container：`nghcc-admin-web`
+- db container：`nghcc-admin-db`
+- database：`nghcc_admin`
+- local web port：`26001`
+- internal web port：`8000`
 
-## 維運腳本
+## 還原資料庫
 
-本機或正式主機可使用以下 PowerShell 腳本輔助檢查與備份：
-
-```powershell
-.\scripts\check-local.ps1
-.\scripts\backup-db.ps1
-.\scripts\backup-uploads.ps1
+```bash
+gzip -dc backups/192.168.16.240/<BACKUP_TS>/nads26db-<BACKUP_TS>.sql.gz \
+  | docker exec -i nghcc-admin-db mysql -unghcc_admin -p<DB_PASSWORD> nghcc_admin
 ```
 
-詳細步驟請參考：
+## 還原 media
 
-- [備份與還原](backup-and-restore.md)
-- [維運檢查清單](operations-checklist.md)
+```bash
+tar -xzf backups/192.168.16.240/<BACKUP_TS>/nads26-media-<BACKUP_TS>.tar.gz -C uploads --strip-components=1
+```
+
+## 驗證
+
+```bash
+docker compose ps
+curl http://localhost:26001/api/health/
+curl -I http://localhost:26001/
+```
+
+應確認：
+
+- `nghcc-admin-web` 狀態為 `Up`
+- `nghcc-admin-db` 狀態為 `healthy`
+- `/api/health/` 回傳 database `ok`
+- 首頁可正常開啟
+- media 圖片與檔案連結可正常讀取
+
+## 注意事項
+
+- 不要直接覆蓋 `.240` 現行服務。
+- 不要在沒有備份與還原演練前切換正式服務。
+- `.env`、DB dump、media 備份不可提交到 GitHub。
