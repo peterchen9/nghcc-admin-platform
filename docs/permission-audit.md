@@ -99,18 +99,33 @@
 2. `/users/*` 有登入與 superuser 檢查，但 AJAX CSRF header 仍待 P5 後續修補。
 3. `/api/hymns/*`、`/api/humnos/*` 主要以 DRF `IsAuthenticated` 控制，未檢查 menu permission。
 4. `/eureka/*` 多數使用 `@login_required`，未檢查 menu permission。
-5. `/hymn_resources/htm/<filename>` 目前未要求登入，會直接提供 HTM 檔案，需確認內容是否敏感。
+5. `/hymn_resources/htm/<filename>` 已於 P2 第二階段補上 `@login_required`，避免未登入直接讀取 HTM 詩歌檔。
 6. `/p/<slug>/` 與首頁內容公開，符合 Portal/CMS 定位，但需確認頁面內容不含敏感資訊。
 
 ## 高風險與待確認
 
 | 風險 | 描述 | 建議 |
 | --- | --- | --- |
-| 看不到選單但可直接打 URL | 詩歌、影音、Eureka API/view 多只檢查登入，未檢查 menu permission | P2 第二階段先加測試與盤點，不建議一次重構 |
+| 看不到選單但可直接打 URL | 詩歌、影音、Eureka API/view 多只檢查登入，未檢查 menu permission | 後續階段再評估是否將 menu permission 納入 view 層檢查，不建議一次重構 |
 | 使用者管理 AJAX | 需要 superuser，但前端 CSRF header 仍需補強 | 建議先做 P5 CSRF/AJAX 小修補 |
 | 非 staff 測試缺口 | 本機資料全為 staff，無法用正式還原資料驗證非 staff admin 行為 | 建議建立去識別化測試 fixture |
-| HTM resource 公開 | `/hymn_resources/htm/<filename>` 不需登入 | 若檔案含內部資料，應補登入或 media 授權 |
+| HTM resource 公開 | 已補 `@login_required` | 後續可評估是否需要進一步檢查 menu permission |
 | Django permission 與 menu permission 分離 | 看得見選單不代表有 Django permission，反之亦然 | 建議先建立權限矩陣，再小步修補高風險 URL |
+
+## P2 第二階段 URL 權限小修補
+
+`/hymn_resources/htm/<filename>` 對應 `modules.hymns.views.serve_htm_resource`，用途是相容舊前端，直接提供 HTM 歌詞/投影檔。由於無法確認所有 HTM 檔都適合完全公開，本階段已補上 `@login_required`。
+
+已驗證：
+
+- 未登入使用者不可讀取 `/hymn_resources/htm/<filename>`。
+- 已登入使用者仍可正常讀取既有 HTM 詩歌檔。
+- `/hymns/`、`/webav/`、`/eureka/` 未登入仍不可進入。
+
+仍保留到後續階段：
+
+- 詩歌、影音、Eureka 等核心功能目前多只要求登入，未檢查左側選單 `allowed_menu_items`。
+- 是否將 menu permission 套入 view/API 層，需另行設計與人工驗證，避免一次改壞既有同工流程。
 
 ## 本階段不做的事
 

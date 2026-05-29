@@ -21,7 +21,7 @@
 | `/api/hymns/` | `hymn_list` | hymns | 是 | DRF `IsAuthenticated` | 否 | AJAX 寫入已送 `X-CSRFToken` | GET/POST；POST 可新增詩歌 |
 | `/api/hymns/<int:pk>/` | `hymn_detail` | hymns | 是 | DRF `IsAuthenticated` | 否 | AJAX 寫入已送 `X-CSRFToken` | GET/PUT/DELETE |
 | `/api/hymns/<int:pk>/upload/` | `hymn_upload` | hymns | 是 | DRF `IsAuthenticated` | 否 | AJAX 已送 `X-CSRFToken` | POST，上傳檔案 |
-| `/hymn_resources/htm/<str:filename>` | `serve_htm_resource` | hymns | 否 | 無 | 否 | GET，不需 CSRF | 高風險待確認：直接提供 HTM 檔 |
+| `/hymn_resources/htm/<str:filename>` | `serve_htm_resource` | hymns | 是 | `@login_required` | 否 | GET，不需 CSRF | P2 第二階段已補登入限制；已登入詩歌功能不受影響 |
 | `/worship/hymns/` | `hymns_page_view` | hymns | 是 | `@login_required` | 否 | GET | 與 `/hymns/` 相同頁 |
 | `/hymns/` | `hymns_page_view` | hymns | 是 | `@login_required` | 否 | GET | 詩歌主頁 |
 | `/webav/` | `humnos_page_view` | humnos | 是 | `@login_required` | 否 | GET | 影音工具頁 |
@@ -45,11 +45,11 @@
 
 | 風險 | URL | 說明 | 建議 |
 | --- | --- | --- | --- |
-| 未登入可存取檔案 | `/hymn_resources/htm/<filename>` | 目前沒有 `@login_required`，若 HTM 含內部資料需補授權 | P2 第二階段先加測試與人工確認 |
+| 未登入可存取檔案 | `/hymn_resources/htm/<filename>` | 已補 `@login_required` | 後續只需評估是否再檢查 menu permission |
 | POST endpoint 沒有細部 permission | `/api/hymns/*`, `/api/humnos/*`, `/eureka/*` | 多數只要求登入，未檢查 menu permission 或 Django permission | 不建議一次改，先補高風險寫入端點測試 |
 | 只靠前端選單隱藏 | 詩歌、影音、Eureka | 左側選單不可見不等於 URL 不可存取 | 後續評估 view 層是否讀取 menu permission |
 | AJAX endpoint 權限不明 | `/users/*` 前端 AJAX | 後端有 superuser 檢查，但 CSRF header 待補 | 建議 P5 CSRF/AJAX 小修補優先 |
 
 ## 本階段結論
 
-目前沒有直接發現「未登入可讀大量會員資料」的 URL；會員、詩歌頁與影音頁皆需登入。但有多個「登入即可直接打 URL，不檢查選單授權」的情況，這是 P2 第二階段最適合小步修補的方向。
+目前沒有直接發現「未登入可讀大量會員資料」的 URL；會員、詩歌頁與影音頁皆需登入。P2 第二階段已先補上 `/hymn_resources/htm/<filename>` 登入限制。仍有多個「登入即可直接打 URL，不檢查選單授權」的情況，後續需小步評估是否將 menu permission 納入 view/API 層。

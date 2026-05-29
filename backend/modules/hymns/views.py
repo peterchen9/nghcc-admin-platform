@@ -518,6 +518,7 @@ def hymn_upload(request, pk):
 
 from django.http import FileResponse, Http404
 
+@login_required
 def serve_htm_resource(request, filename):
     """相容舊前端路由：直接提供 HTM 歌詞/投影檔檔案"""
     # 預防路徑穿越漏洞
@@ -534,5 +535,4 @@ from django.shortcuts import render
 def hymns_page_view(request):
     """渲染詩歌資料庫前端網頁"""
     return render(request, 'hymns/hymns_page.html')
-
 

@@ -73,6 +73,8 @@ scripts/check-local.sh
 - 第一階段已新增唯讀盤點腳本 `scripts/audit-permissions.sh` / `scripts/audit-permissions.ps1`。
 - 第一階段已新增 permission visibility tests。
 - 第一階段尚未做任何權限重構。
+- 第二階段已補強 `/hymn_resources/htm/<filename>` 登入限制。
+- 第二階段已新增 URL access control tests。
 - 盤點 Django permission。
 - 盤點 group permission。
 - 盤點 user permission。
@@ -85,7 +87,7 @@ scripts/check-local.sh
 
 - 每個自訂 URL 都有明確權限需求。
 - 選單可見不代表可操作的風險被消除或記錄。
-- P5 後續小修補已補上使用者管理 AJAX CSRF header；P2 第二階段可聚焦公開 HTM resource、登入即可直接打 URL 的 menu permission 差異。
+- P5 後續小修補已補上使用者管理 AJAX CSRF header；P2 第二階段已處理公開 HTM resource。下一步可聚焦登入即可直接打 URL 的 menu permission 差異。
 - 不建議一次性重建權限模型，避免影響登入、左側選單、admin 與既有資料。
 
 ## P3：測試補強

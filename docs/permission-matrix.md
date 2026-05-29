@@ -7,7 +7,7 @@
 | 功能 | 選單 | URL | Django Permission | Menu Permission | 目前狀態 | 風險 |
 | --- | --- | --- | --- | --- | --- | --- |
 | 會員/關懷 | 關懷、Eureka!找人、牧區小組、新朋友登記、搜名單 | `/eureka/`, `/eureka/*` | 未見明確 permission_required | 以 `allowed_menu_items` 控制可見性 | 已實作，需登入 | 看不到選單仍可能直接打 URL |
-| 詩歌 | 崇拜禮儀 / 詩歌資料庫 | `/hymns/`, `/api/hymns/*` | DRF `IsAuthenticated`，未見細部 Django permission | 以 `allowed_menu_items` 控制可見性 | 已實作，含上傳 | API 未檢查 menu permission |
+| 詩歌 | 崇拜禮儀 / 詩歌資料庫 | `/hymns/`, `/api/hymns/*`, `/hymn_resources/htm/<filename>` | 頁面與 HTM resource 需登入；API 使用 DRF `IsAuthenticated`，未見細部 Django permission | 以 `allowed_menu_items` 控制可見性 | 已實作，含上傳；HTM resource 已於 P2 第二階段補登入限制 | API 未檢查 menu permission |
 | 影音 | 工具 / 網路影音下載 | `/webav/`, `/api/humnos/*` | DRF `IsAuthenticated`，未見細部 Django permission | 以 `allowed_menu_items` 控制可見性 | 已實作 | 下載 endpoint 寫入暫存檔，權限僅登入 |
 | 使用者管理 | 管理員 / 使用者管理 | `/users/`, `/users/*` | view 以 `is_superuser` 自訂檢查 | 以 `allowed_menu_items` 控制可見性 | 已實作 | AJAX CSRF header 待補；menu 與 superuser 規則分離 |
 | 首頁內容編輯 | 管理員 / 首頁內容編輯 | `/pages/edit-home/` | view 以 `is_superuser` 自訂檢查 | 以 `allowed_menu_items` 控制可見性 | 已實作，導到 Django admin | menu 與 superuser 規則分離 |
@@ -30,3 +30,4 @@
 2. 先保留 menu permission 作為左側選單可見性控制。
 3. 對高風險 URL 小步補後端授權測試，再決定是否將 menu permission 納入 view 層檢查。
 4. 使用者管理與首頁內容編輯應維持 superuser 限制，後續才評估是否改成具體 Django permission。
+5. `/hymn_resources/htm/<filename>` 已先補 `login_required`；是否再綁定詩歌選單權限留待後續階段。
