@@ -58,6 +58,7 @@ def user_create(request):
     department = request.data.get('department', '').strip()
     role = request.data.get('role', '').strip()
     is_active = request.data.get('is_active', True)
+    is_staff = request.data.get('is_staff', True)
 
     if not username or not password:
         return Response({'error': '帳號與密碼為必填欄位'}, status=400)
@@ -69,7 +70,8 @@ def user_create(request):
         username=username,
         password=password,
         email=email,
-        is_active=is_active
+        is_active=is_active,
+        is_staff=is_staff,
     )
     
     profile = user.profile
@@ -95,6 +97,7 @@ def user_update(request, pk):
     department = request.data.get('department', '').strip()
     role = request.data.get('role', '').strip()
     is_active = request.data.get('is_active', True)
+    is_staff = request.data.get('is_staff', user.is_staff)
 
     if username and username != user.username:
         if User.objects.filter(username=username).exclude(pk=pk).exists():
@@ -106,6 +109,7 @@ def user_update(request, pk):
 
     user.email = email
     user.is_active = is_active
+    user.is_staff = is_staff
     user.save()
 
     profile = user.profile

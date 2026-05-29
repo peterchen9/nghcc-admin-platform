@@ -38,5 +38,16 @@
 - 前端首頁可開啟
 - `/api/health/` 回傳 database `ok`
 - Django Admin 可開啟
+- 從使用者管理新增的後台帳號需顯示「後台：可登入」
 - uploads 可寫入與讀取
 - 重新啟動容器後資料仍保留
+
+## 使用者登入問題
+
+Django Admin 登入需要：
+
+- `auth_user.is_active = 1`
+- `auth_user.is_staff = 1`
+- 密碼正確
+
+若帳號密碼正確但仍出現「請輸入正確的工作人員帳號使用者名稱及密碼」，優先檢查 `is_staff`。
