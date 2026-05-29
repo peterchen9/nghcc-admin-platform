@@ -85,7 +85,7 @@ scripts/check-local.sh
 
 - 每個自訂 URL 都有明確權限需求。
 - 選單可見不代表可操作的風險被消除或記錄。
-- 下一步只建議小步修補高風險 URL 權限，例如公開 HTM resource、登入即可直接打 URL 的 menu permission 差異、使用者管理 AJAX CSRF header。
+- P5 後續小修補已補上使用者管理 AJAX CSRF header；P2 第二階段可聚焦公開 HTM resource、登入即可直接打 URL 的 menu permission 差異。
 - 不建議一次性重建權限模型，避免影響登入、左側選單、admin 與既有資料。
 
 ## P3：測試補強
@@ -138,7 +138,7 @@ scripts/check-local.sh
 - 第三階段已保留 `DisableCSRFMiddleware` 作為相容模式，並可在測試模式啟用 Django `CsrfViewMiddleware`。
 - 第三階段已新增 `tests/security/test_csrf_behavior.py` 與 `scripts/run-csrf-tests.sh` / `scripts/run-csrf-tests.ps1`。
 - 第三階段已完成表單與 AJAX CSRF 盤點。
-- 後續仍需補強 `accounts/user_list.html` 使用者管理 AJAX 的 `X-CSRFToken`。
+- 後續小修補已補強 `accounts/user_list.html` 使用者管理 AJAX 的 `X-CSRFToken`，後端 superuser 檢查未變。
 - 後續仍需在所有人工測試通過後，才正式啟用 CSRF middleware。
 - 後續仍需評估 CKEditor / CMS / filer 上傳套件是否保留、停用或升級。
 - 後續仍需檢查登入與 session 設定。

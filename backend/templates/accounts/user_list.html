@@ -504,6 +504,7 @@
             <button class="modal-close" onclick="closeModal('createModal')">×</button>
         </div>
         <form id="createForm" onsubmit="submitCreate(event)">
+            {% csrf_token %}
             <div class="form-row">
                 <div class="form-group">
                     <label for="create_username">使用者帳號 (必填)</label>
@@ -566,6 +567,7 @@
             <button class="modal-close" onclick="closeModal('editModal')">×</button>
         </div>
         <form id="editForm" onsubmit="submitEdit(event)">
+            {% csrf_token %}
             <input type="hidden" id="edit_user_id">
             <div class="form-row">
                 <div class="form-group">
@@ -675,6 +677,24 @@
 
 {% block extra_js %}
 <script>
+    function getCSRFToken() {
+        const tokenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (tokenInput && tokenInput.value) {
+            return tokenInput.value;
+        }
+
+        const cookie = document.cookie
+            .split(';')
+            .map(item => item.trim())
+            .find(item => item.startsWith('csrftoken=') || item.startsWith('cms26_csrftoken='));
+        return cookie ? decodeURIComponent(cookie.split('=').slice(1).join('=')) : '';
+    }
+
+    function csrfHeaders(extraHeaders = {}) {
+        const token = getCSRFToken();
+        return token ? { ...extraHeaders, 'X-CSRFToken': token } : extraHeaders;
+    }
+
     // Client-side search filtration
     document.getElementById('userSearchInput').addEventListener('input', (e) => {
         const term = e.target.value.trim().toLowerCase();
@@ -751,9 +771,9 @@
 
         fetch('/users/create/', {
             method: 'POST',
-            headers: {
+            headers: csrfHeaders({
                 'Content-Type': 'application/json',
-            },
+            }),
             body: JSON.stringify({
                 username, password, display_name, email, department, role, is_active, is_staff
             })
@@ -815,9 +835,9 @@
 
         fetch(`/users/${id}/`, {
             method: 'POST', // Django backend supports POST/PUT for update
-            headers: {
+            headers: csrfHeaders({
                 'Content-Type': 'application/json',
-            },
+            }),
             body: JSON.stringify({
                 username, password, display_name, email, department, role, is_active, is_staff
             })
@@ -853,9 +873,9 @@
         
         fetch(`/users/${deleteUserId}/delete/`, {
             method: 'POST', // POST delete is cleaner for general browser AJAX
-            headers: {
+            headers: csrfHeaders({
                 'Content-Type': 'application/json',
-            }
+            })
         })
         .then(async res => {
             const data = await res.json();
@@ -892,7 +912,9 @@
         } else {
             document.getElementById('permTreeContainer').innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-secondary);">載入中...</div>';
             
-            fetch('/users/routes/')
+            fetch('/users/routes/', {
+                headers: csrfHeaders()
+            })
             .then(res => res.json())
             .then(routes => {
                 cachedRoutes = routes;
@@ -1065,9 +1087,9 @@
         
         fetch(`/users/${permUserId}/permissions/`, {
             method: 'POST',
-            headers: {
+            headers: csrfHeaders({
                 'Content-Type': 'application/json',
-            },
+            }),
             body: JSON.stringify({ menu_ids: menuIds })
         })
         .then(async res => {

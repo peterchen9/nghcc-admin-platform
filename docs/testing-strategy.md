@@ -32,6 +32,7 @@
 | `tests/security/test_upload_validation.py` | 上傳副檔名、大小、檔名清理、MIME strict mode、Eureka 不合法照片不建立資料 |
 | `tests/security/test_security_settings.py` | DEBUG、ALLOWED_HOSTS、cookie/security settings 可由環境變數控制 |
 | `tests/security/test_csrf_behavior.py` | `ENABLE_CSRF_PROTECTION` 開關、CSRF middleware 切換、未帶 token 的 POST 拒絕、帶 token 的 POST 不因 CSRF 被拒絕 |
+| `tests/security/test_user_ajax_csrf.py` | 使用者管理頁面含 CSRF token、AJAX 含 `X-CSRFToken`、CSRF 模式下 `/users/*` POST 未帶 token 會被拒絕、帶 token 可通過 CSRF 檢查到達 view |
 
 ## 尚未測試的功能
 
@@ -39,7 +40,7 @@
 - QR 報到完整流程：目前只有 `checkin_records` 資料與會員頁局部引用。
 - 影音下載外部實際下載：會牽涉第三方網站、網路與 ffmpeg/yt-dlp 行為，暫不放入最小 smoke test。
 - 檔案上傳破壞性測試：目前先不寫入資料，後續可用自動清除策略補 integration test。
-- CSRF 正式啟用情境：目前已建立 `ENABLE_CSRF_PROTECTION=True` 測試模式，但正式環境尚未啟用，仍需人工驗證登入、上傳、admin、會員、詩歌與使用者管理 AJAX。
+- CSRF 正式啟用情境：目前已建立 `ENABLE_CSRF_PROTECTION=True` 測試模式，且使用者管理 AJAX 已補 `X-CSRFToken`；正式環境尚未啟用，仍需人工驗證登入、上傳、admin、會員、詩歌與使用者管理新增/更新/刪除/權限更新。
 
 ## 執行方式
 
@@ -100,7 +101,7 @@ PowerShell：
 .\scripts\run-csrf-tests.ps1
 ```
 
-此腳本只在測試容器內覆寫 `ENABLE_CSRF_PROTECTION=True`，不修改本機 `.env`，不連線 `.240`。正式啟用前仍需補齊 `accounts/user_list.html` AJAX CSRF header 並完成人工驗證。
+此腳本只在測試容器內覆寫 `ENABLE_CSRF_PROTECTION=True`，不修改本機 `.env`，不連線 `.240`。`accounts/user_list.html` AJAX CSRF header 已補齊；正式啟用前仍需人工驗證使用者新增、更新、刪除與權限更新流程。
 
 ## 未來如何擴充
 

@@ -155,10 +155,10 @@
 | `backend/templates/eureka/neos.html` | Eureka 新朋友查詢表單 | 有 `{% csrf_token %}` | 否 | 低 |
 | `backend/templates/hymns/hymns_page.html` | 詩歌新增、修改、刪除、上傳 | 有 `X-CSRFToken` | 否，仍需 CSRF 模式人工測上傳 | 中 |
 | `backend/templates/humnos/humnos_page.html` | 影音資訊查詢與下載 | 有 `X-CSRFToken` | 否，外部下載流程需人工測 | 中 |
-| `backend/templates/accounts/user_list.html` | 使用者新增、更新、刪除、權限更新 | 掃描未見 `X-CSRFToken` | 是，正式啟用 CSRF 前需補 AJAX header 並測權限管理 | 高 |
+| `backend/templates/accounts/user_list.html` | 使用者新增、更新、刪除、權限更新、選單 routes 載入 | 已補 `getCSRFToken()` 與 `X-CSRFToken` header | 後端 superuser 檢查未變；正式啟用前仍需人工測新增、更新、刪除、權限更新 | 中 |
 | `backend/templates/eureka/eureka.html` | Nominatim 地址查詢 GET | 不需 | 否 | 低 |
 
-本階段未直接修改 `accounts/user_list.html`，因為該頁涉及使用者與權限管理，屬於高敏感流程；需在 P2 權限盤點或 P5 後續小步修正時，搭配人工驗證。
+P5 後續小修補已補上 `accounts/user_list.html` 的 AJAX CSRF header，但未改 API URL、資料結構或後端 superuser 權限判斷。
 
 ### CSRF 測試模式
 
@@ -180,8 +180,28 @@
 | --- | --- |
 | `.env.production.example` 已加入 `ENABLE_CSRF_PROTECTION=False` | 已完成 |
 | 本機可用 `ENABLE_CSRF_PROTECTION=True` 跑測試 | 已完成 |
-| `accounts/user_list.html` AJAX CSRF header | 待修正與人工確認 |
+| `accounts/user_list.html` AJAX CSRF header | 已補 `X-CSRFToken`，仍需人工確認使用者新增、更新、刪除與權限更新 |
 | CKEditor uploader CSRF 行為 | 待人工確認 |
 | Django admin 登入與登出 | 需在 CSRF 模式人工確認 |
 | 詩歌上傳 | 需在 CSRF 模式人工確認 |
 | Eureka 新朋友照片上傳 | 需在 CSRF 模式人工確認 |
+
+## P5 後續小修補：使用者管理 AJAX CSRF header
+
+已在 `backend/templates/accounts/user_list.html` 以最小改動加入：
+
+1. `{% csrf_token %}` hidden input。
+2. `getCSRFToken()`，優先讀取 hidden input，必要時讀取 `csrftoken` / `cms26_csrftoken` cookie。
+3. `csrfHeaders()`，統一將 `X-CSRFToken` 加到 AJAX headers。
+
+已補強的 AJAX 呼叫：
+
+| 功能 | URL | 方法 | 狀態 |
+| --- | --- | --- | --- |
+| 新增使用者 | `/users/create/` | POST | 已加入 `X-CSRFToken` |
+| 更新使用者 | `/users/<id>/` | POST | 已加入 `X-CSRFToken` |
+| 刪除使用者 | `/users/<id>/delete/` | POST | 已加入 `X-CSRFToken` |
+| 載入選單 routes | `/users/routes/` | GET | 已使用同一套 header helper |
+| 更新選單權限 | `/users/<id>/permissions/` | POST | 已加入 `X-CSRFToken` |
+
+後端 `is_superuser` 檢查未變。正式啟用 CSRF 前仍需人工測試使用者新增、更新、刪除、權限更新完整流程。
