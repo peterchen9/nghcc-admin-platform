@@ -13,6 +13,27 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+
+def env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def env_first(*names, default=''):
+    for name in names:
+        value = os.getenv(name)
+        if value is not None:
+            return value
+    return default
+
+
+def env_list(*names, default=''):
+    raw_value = env_first(*names, default=default)
+    return [item.strip() for item in raw_value.split(',') if item.strip()]
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -24,23 +45,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', os.getenv('SESSION_SECRET', 'local-dev-only-secret'))
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DJANGO_DEBUG', '0') == '1'
+DEBUG = env_bool('DJANGO_DEBUG', env_bool('DEBUG', False))
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
-    if host.strip()
-]
+ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', 'ALLOWED_HOSTS', default='localhost,127.0.0.1')
 
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
-    if origin.strip()
-]
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', default='')
 
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', False)
+CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', False)
+SESSION_COOKIE_HTTPONLY = env_bool('SESSION_COOKIE_HTTPONLY', True)
+CSRF_COOKIE_HTTPONLY = env_bool('CSRF_COOKIE_HTTPONLY', False)
+SECURE_CONTENT_TYPE_NOSNIFF = env_bool('SECURE_CONTENT_TYPE_NOSNIFF', True)
+X_FRAME_OPTIONS = env_first('X_FRAME_OPTIONS', default='SAMEORIGIN')
+UPLOAD_MAX_SIZE_MB = int(env_first('UPLOAD_MAX_SIZE_MB', default='10'))
+UPLOAD_ALLOWED_EXTENSIONS = env_list(
+    'UPLOAD_ALLOWED_EXTENSIONS',
+    default='jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx',
+)
 
 
 # Application definition

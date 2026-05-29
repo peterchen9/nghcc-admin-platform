@@ -53,6 +53,30 @@ Git Bash / WSL2 / Linux：
 scripts/check-local.sh
 ```
 
+Smoke 與唯讀 integration tests：
+
+```bash
+export TEST_USERNAME=<username>
+export TEST_PASSWORD=<password>
+export TEST_USERNAME_SECONDARY=<username>
+export TEST_PASSWORD_SECONDARY=<password>
+export TEST_ADMIN_USERNAME=<username>
+export TEST_ADMIN_PASSWORD=<password>
+scripts/run-smoke-tests.sh
+```
+
+PowerShell：
+
+```powershell
+$env:TEST_USERNAME="<username>"
+$env:TEST_PASSWORD="<password>"
+$env:TEST_USERNAME_SECONDARY="<username>"
+$env:TEST_PASSWORD_SECONDARY="<password>"
+$env:TEST_ADMIN_USERNAME="<username>"
+$env:TEST_ADMIN_PASSWORD="<password>"
+.\scripts\run-smoke-tests.ps1
+```
+
 ## 建立管理員
 
 ```bash
@@ -118,3 +142,11 @@ scripts/check-local.sh
 - `uploads/` 實際檔案不可提交到 GitHub。
 - DB dump 與 media 備份不可提交到 GitHub。
 - `docker-compose.volume.yml` 只切換本機 media 掛載方式，不會連線或修改 `.240`。
+
+## P5 安全設定提醒
+
+- 本機 HTTP 開發環境維持 `SESSION_COOKIE_SECURE=False` 與 `CSRF_COOKIE_SECURE=False`。
+- production 部署前必須改為 `SESSION_COOKIE_SECURE=True` 與 `CSRF_COOKIE_SECURE=True`。
+- production 部署前必須設定正式 `ALLOWED_HOSTS` / `DJANGO_ALLOWED_HOSTS`。
+- production 部署前必須設定正式 HTTPS `CSRF_TRUSTED_ORIGINS`。
+- `DisableCSRFMiddleware` 目前仍存在，P5 第一階段只盤點不硬改，避免破壞既有登入、上傳與 admin 流程。

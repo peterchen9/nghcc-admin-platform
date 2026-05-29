@@ -19,12 +19,19 @@
 | `tests/smoke/test_media.py` | `MEDIA_ROOT` 可讀，檔案數至少 33827 |
 | `tests/smoke/test_admin.py` | `/admin/` 可開啟或導向登入，登入後 admin index HTTP 200 |
 
+## 納入唯讀 Integration Test 的功能
+
+| 測試檔 | 驗證內容 |
+| --- | --- |
+| `tests/integration/test_readonly_api.py` | `/api/health/`、`/api/hymns/`、`/users/routes/` 的唯讀行為 |
+
 ## 尚未測試的功能
 
 - 奉獻、財會、課程教育、報表：目前未在 admin-platform 內完整實作。
 - QR 報到完整流程：目前只有 `checkin_records` 資料與會員頁局部引用。
 - 影音下載外部實際下載：會牽涉第三方網站、網路與 ffmpeg/yt-dlp 行為，暫不放入最小 smoke test。
 - 檔案上傳破壞性測試：目前先不寫入資料，後續可用自動清除策略補 integration test。
+- CSRF 強制啟用情境：目前 CSRF middleware 尚未恢復，需 P5 第二階段另建可開關測試。
 
 ## 執行方式
 
@@ -57,9 +64,11 @@ PowerShell：
 .\scripts\run-smoke-tests.ps1
 ```
 
+腳本會同時執行 `tests/smoke` 與 `tests/integration`，且不連線 `.240`。
+
 ## 未來如何擴充
 
-1. 加入 API integration tests，先測 read-only API。
+1. 擴充 API integration tests，先維持 read-only API。
 2. 加入可自動清理的檔案上傳測試。
 3. 為 QR 報到資料查詢補 fixture 或 read-only 檢查。
 4. 為使用者權限與選單可見性補角色矩陣測試。

@@ -20,6 +20,7 @@ from .serializers import HymnListSerializer, HymnDetailSerializer
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from nads26.upload_validation import UploadValidationError, validate_uploaded_file
 
 
 # 檔案儲存目錄
@@ -27,6 +28,7 @@ HTM_DIR = os.path.join(settings.MEDIA_ROOT, 'hymns', 'html')
 MP3_DIR = os.path.join(settings.MEDIA_ROOT, 'hymns', 'mp3')
 SCORE_DIR = os.path.join(settings.MEDIA_ROOT, 'hymns', 'pdf')
 MIDI_DIR = os.path.join(settings.MEDIA_ROOT, 'hymns', 'midi')
+HYMN_UPLOAD_ALLOWED_EXTENSIONS = {'mp3', 'htm', 'html', 'pdf', 'mid', 'midi'}
 
 
 @api_view(['GET', 'POST'])
@@ -398,6 +400,13 @@ def hymn_upload(request, pk):
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return Response({'error': '未提供檔案'}, status=400)
+    try:
+        validated_upload = validate_uploaded_file(
+            uploaded_file,
+            allowed_extensions=HYMN_UPLOAD_ALLOWED_EXTENSIONS,
+        )
+    except UploadValidationError as exc:
+        return Response({'error': str(exc)}, status=400)
 
     # 取得曲名
     title = request.POST.get('title', '').strip()
@@ -420,10 +429,11 @@ def hymn_upload(request, pk):
     new_stroke_id = f'{stroke_prefix}{seq:02d}'
     hymn.stroke_id = new_stroke_id
 
-    fname = uploaded_file.name.lower()
+    safe_uploaded_name = validated_upload.safe_name
+    fname = safe_uploaded_name.lower()
 
     if fname.endswith('.mp3'):
-        save_name = f'{new_stroke_id}_{uploaded_file.name}'
+        save_name = f'{new_stroke_id}_{safe_uploaded_name}'
         os.makedirs(MP3_DIR, exist_ok=True)
         dest = os.path.join(MP3_DIR, save_name)
         with open(dest, 'wb') as f:
@@ -470,7 +480,7 @@ def hymn_upload(request, pk):
         })
 
     elif fname.endswith('.pdf'):
-        save_name = f'{new_stroke_id}_{uploaded_file.name}'
+        save_name = f'{new_stroke_id}_{safe_uploaded_name}'
         os.makedirs(SCORE_DIR, exist_ok=True)
         dest = os.path.join(SCORE_DIR, save_name)
         with open(dest, 'wb') as f:
@@ -485,7 +495,7 @@ def hymn_upload(request, pk):
         })
 
     elif fname.endswith('.mid') or fname.endswith('.midi'):
-        save_name = f'{new_stroke_id}_{uploaded_file.name}'
+        save_name = f'{new_stroke_id}_{safe_uploaded_name}'
         os.makedirs(MIDI_DIR, exist_ok=True)
         dest = os.path.join(MIDI_DIR, save_name)
         with open(dest, 'wb') as f:
@@ -501,7 +511,7 @@ def hymn_upload(request, pk):
 
     else:
         return Response(
-            {'error': f'不支援的檔案類型: {uploaded_file.name}，僅接受 .mp3 / .htm / .pdf / .mid / .midi'},
+            {'error': f'不支援的檔案類型: {safe_uploaded_name}，僅接受 .mp3 / .htm / .html / .pdf / .mid / .midi'},
             status=400,
         )
 
@@ -524,6 +534,5 @@ from django.shortcuts import render
 def hymns_page_view(request):
     """渲染詩歌資料庫前端網頁"""
     return render(request, 'hymns/hymns_page.html')
-
 
 

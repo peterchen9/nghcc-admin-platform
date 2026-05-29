@@ -36,6 +36,6 @@ MSYS_NO_PATHCONV=1 $COMPOSE $COMPOSE_FILES run --rm \
   -e TEST_PASSWORD_SECONDARY \
   -e TEST_ADMIN_USERNAME \
   -e TEST_ADMIN_PASSWORD \
-  web pytest tests/smoke
+  web pytest tests/smoke tests/integration
 
-echo "Smoke tests completed successfully."
+echo "Smoke and read-only integration tests completed successfully."

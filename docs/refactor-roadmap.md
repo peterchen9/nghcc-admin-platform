@@ -116,16 +116,19 @@ scripts/check-local.sh
 
 目標：降低上線後常見 Web 風險，尤其是 CSRF、上傳與 session。
 
-- 檢查 CSRF middleware。
-- 檢查 upload MIME type。
-- 檢查檔名清理。
-- 檢查檔案大小限制。
-- 檢查登入與 session 設定。
-- 檢查 `DEBUG`、`ALLOWED_HOSTS`、`CSRF_TRUSTED_ORIGINS` 的正式設定。
-- 檢查 CKEditor 4 與相關上傳套件的維護狀態。
+- 第一階段已建立 `docs/security-audit.md`。
+- 第一階段已將 `DEBUG` / `ALLOWED_HOSTS` alias、cookie、安全標頭、上傳大小與副檔名設定環境變數化。
+- 第一階段已建立 `nads26.upload_validation` helper。
+- 第一階段只套用到詩歌上傳；Eureka 照片與 CKEditor 上傳先盤點未硬改。
+- 第一階段已新增 read-only API integration tests。
+- 後續仍需檢查 CSRF middleware。
+- 後續仍需檢查 upload MIME type。
+- 後續仍需檢查登入與 session 設定。
+- 後續仍需檢查 CKEditor 4 與相關上傳套件的維護狀態。
 
 驗收條件：
 
 - 正式環境不使用弱化 CSRF 的設定。
 - 上傳端點有副檔名、MIME、大小與路徑穿越防護。
 - secrets 只存在 `.env` 或主機環境，不進 Git。
+- production 部署前必須確認 HTTPS、`SESSION_COOKIE_SECURE=True`、`CSRF_COOKIE_SECURE=True`、正式 `ALLOWED_HOSTS`、正式 `CSRF_TRUSTED_ORIGINS`。
