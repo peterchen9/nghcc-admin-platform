@@ -1,21 +1,8 @@
 name: nghcc-admin-platform
 
 services:
-  frontend:
-    container_name: nghcc-admin-frontend
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "${FRONTEND_PORT:-26001}:80"
-    depends_on:
-      - backend
-    restart: unless-stopped
-    networks:
-      - nghcc-admin-network
-
-  backend:
-    container_name: nghcc-admin-backend
+  web:
+    container_name: nghcc-admin-web
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -24,10 +11,13 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-nghcc_admin}
+      DB_USER: ${DB_USER:-nghcc_admin}
+      DB_PASSWORD: ${DB_PASSWORD:-change_me_password}
       DB_PASS: ${DB_PASSWORD:-change_me_password}
       UPLOAD_DIR: /app/media
     ports:
-      - "${BACKEND_PORT:-26002}:8000"
+      - "${APP_PORT:-26001}:8000"
     volumes:
       - ./uploads:/app/media
     depends_on:
@@ -41,7 +31,7 @@ services:
     container_name: nghcc-admin-db
     image: mysql:8.0
     environment:
-      MYSQL_DATABASE: ${DB_NAME:-nghcc_admin_platform}
+      MYSQL_DATABASE: ${DB_NAME:-nghcc_admin}
       MYSQL_USER: ${DB_USER:-nghcc_admin}
       MYSQL_PASSWORD: ${DB_PASSWORD:-change_me_password}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-change_me_root_password}

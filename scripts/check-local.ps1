@@ -1,6 +1,6 @@
 param(
-    [string]$FrontendUrl = "http://localhost:26001/",
-    [string]$BackendUrl = "http://localhost:26002/api/health/",
+    [string]$WebUrl = "http://localhost:26001/",
+    [string]$HealthUrl = "http://localhost:26001/api/health/",
     [string]$ComposeCommand = "docker-compose"
 )
 
@@ -35,17 +35,18 @@ function Assert-HttpOk {
 Write-Host "Checking Docker Compose containers..."
 Invoke-Compose @("ps")
 
-$frontend = Assert-HttpOk -Name "Frontend" -Url $FrontendUrl
-$backend = Assert-HttpOk -Name "Backend health" -Url $BackendUrl
+$web = Assert-HttpOk -Name "Web" -Url $WebUrl
+$healthResponse = Assert-HttpOk -Name "Health" -Url $HealthUrl
 
-$health = $backend.Content | ConvertFrom-Json
+$health = $healthResponse.Content | ConvertFrom-Json
 if ($health.database -ne "ok") {
     throw "Database check failed: $($health.database)"
 }
 
 Write-Host "Database OK: $($health.database)"
-if ($frontend.Content -notmatch "sidebar") {
-    throw "Frontend content check failed: expected title was not found."
+if ($web.Content -notmatch "sidebar") {
+    throw "Web content check failed: sidebar marker was not found."
 }
-Write-Host "Frontend content OK: sidebar marker found"
+
+Write-Host "Web content OK: sidebar marker found"
 Write-Host "Local health check completed."
