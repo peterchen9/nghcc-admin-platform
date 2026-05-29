@@ -75,6 +75,9 @@ scripts/check-local.sh
 - 第一階段尚未做任何權限重構。
 - 第二階段已補強 `/hymn_resources/htm/<filename>` 登入限制。
 - 第二階段已新增 URL access control tests。
+- 第三階段已完成 menu permission 使用方式分析。
+- 第三階段已建立 `ENABLE_MENU_PERMISSION_ENFORCEMENT` PoC 開關與實驗性 helper。
+- 第三階段只新增設計驗證測試，未套用正式 view/API，未做權限重構。
 - 盤點 Django permission。
 - 盤點 group permission。
 - 盤點 user permission。
@@ -87,7 +90,7 @@ scripts/check-local.sh
 
 - 每個自訂 URL 都有明確權限需求。
 - 選單可見不代表可操作的風險被消除或記錄。
-- P5 後續小修補已補上使用者管理 AJAX CSRF header；P2 第二階段已處理公開 HTM resource。下一步可聚焦登入即可直接打 URL 的 menu permission 差異。
+- P5 後續小修補已補上使用者管理 AJAX CSRF header；P2 第二階段已處理公開 HTM resource。P2 第三階段建議採用 B 起步、逐步往 C 收斂，下一步可挑單一 read-only 頁面做人工驗證計畫。
 - 不建議一次性重建權限模型，避免影響登入、左側選單、admin 與既有資料。
 
 ## P3：測試補強

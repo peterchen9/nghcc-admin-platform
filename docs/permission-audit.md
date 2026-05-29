@@ -127,6 +127,20 @@
 - 詩歌、影音、Eureka 等核心功能目前多只要求登入，未檢查左側選單 `allowed_menu_items`。
 - 是否將 menu permission 套入 view/API 層，需另行設計與人工驗證，避免一次改壞既有同工流程。
 
+## P2 第三階段 Menu Permission Enforcement 設計驗證
+
+已新增：
+
+- [menu-permission-analysis.md](menu-permission-analysis.md)
+- [menu-permission-enforcement-proposal.md](menu-permission-enforcement-proposal.md)
+- `ENABLE_MENU_PERMISSION_ENFORCEMENT=False`
+- `nads26.menu_permissions.menu_permission_required()`
+- `tests/security/test_menu_permission_strategy.py`
+
+盤點後修正原先假設：menu permission 目前不只是左側選單顯示，`MenuPermissionMiddleware` 已對部分登入後頁面做 route 比對與存取限制。但它不是 view/API 層的一致授權規則，且 `/api/*`、`/users/*`、部分資源路徑不完全受它涵蓋。
+
+本階段只建立 PoC helper 與測試，未套用到正式 view，未改現有權限行為。
+
 ## 本階段不做的事
 
 - 不調整任何 user/group/permission/menu 資料。

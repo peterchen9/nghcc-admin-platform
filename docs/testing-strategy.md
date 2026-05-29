@@ -34,6 +34,7 @@
 | `tests/security/test_csrf_behavior.py` | `ENABLE_CSRF_PROTECTION` 開關、CSRF middleware 切換、未帶 token 的 POST 拒絕、帶 token 的 POST 不因 CSRF 被拒絕 |
 | `tests/security/test_user_ajax_csrf.py` | 使用者管理頁面含 CSRF token、AJAX 含 `X-CSRFToken`、CSRF 模式下 `/users/*` POST 未帶 token 會被拒絕、帶 token 可通過 CSRF 檢查到達 view |
 | `tests/security/test_url_access_control.py` | `/hymn_resources/htm/<filename>` 未登入不可讀、已登入可讀，核心頁面未登入不可進入、已登入可用 |
+| `tests/security/test_menu_permission_strategy.py` | `ENABLE_MENU_PERMISSION_ENFORCEMENT` 關閉時維持現況，開啟時 PoC decorator 依 menu permission 放行或拒絕 |
 
 ## 尚未測試的功能
 
@@ -42,7 +43,7 @@
 - 影音下載外部實際下載：會牽涉第三方網站、網路與 ffmpeg/yt-dlp 行為，暫不放入最小 smoke test。
 - 檔案上傳破壞性測試：目前先不寫入資料，後續可用自動清除策略補 integration test。
 - CSRF 正式啟用情境：目前已建立 `ENABLE_CSRF_PROTECTION=True` 測試模式，且使用者管理 AJAX 已補 `X-CSRFToken`；正式環境尚未啟用，仍需人工驗證登入、上傳、admin、會員、詩歌與使用者管理新增/更新/刪除/權限更新。
-- Menu permission view/API 層測試：目前只測 login_required 與核心可用性，尚未要求 view/API 檢查 `allowed_menu_items`。
+- Menu permission view/API 層正式套用測試：目前已完成 PoC helper 測試，但尚未把 `allowed_menu_items` 全面套到正式 view/API。
 
 ## 執行方式
 

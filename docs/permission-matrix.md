@@ -31,3 +31,4 @@
 3. 對高風險 URL 小步補後端授權測試，再決定是否將 menu permission 納入 view 層檢查。
 4. 使用者管理與首頁內容編輯應維持 superuser 限制，後續才評估是否改成具體 Django permission。
 5. `/hymn_resources/htm/<filename>` 已先補 `login_required`；是否再綁定詩歌選單權限留待後續階段。
+6. P2 第三階段建議從「B. menu permission + login_required」起步，逐步往「C. menu permission + Django permission」收斂；目前只建立 PoC，不改正式行為。
