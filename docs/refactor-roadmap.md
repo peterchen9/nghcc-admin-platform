@@ -461,3 +461,28 @@ Verification order:
 The new script defaults to checklist output and requires `-ExecuteLocal` before it runs local commands. It contains no `.240` host, SSH, deploy, remote mutation, or enforce step.
 
 Next recommended step: run the staging-like recheck locally, review the generated CSV and dry-run grant plan, then decide whether a separately reviewed grant apply proposal is ready. Enforcement remains out of scope.
+
+## API Scope Reviewed Grant Backfill Plan
+
+Added `docs/api-scope-reviewed-backfill-plan.md` plus proposal-only sample CSV artifacts:
+
+- `docs/samples/api-scope-reviewed-backfill-sample.csv`
+- `docs/samples/api-scope-reviewed-backfill-rollback-sample.csv`
+
+Scope:
+- No deployment, connection, or modification to `.240`.
+- No `API_PERMISSION_MODE=enforce`.
+- Default `API_PERMISSION_MODE=off` remains unchanged.
+- No default API behavior change.
+- No direct grant apply.
+- No automatic backfill.
+- No business features.
+
+Review result from the latest local report-only CSV and `plan_api_scope_grants` dry-run:
+- Suggested groups: `api_hymns_readers`, `api_hymns_editors`, `api_hymns_uploaders`, `api_humnos_readers`, and `api_humnos_operators`.
+- Suggested group grants: eight role-to-scope grants covering hymn read/write/upload and humnos read/write scopes.
+- Direct user grants: none suggested.
+- User assignments: candidate assignments for `peterchen` require human review before they can be included in an executable reviewed apply CSV.
+- Rollback: disable applied grants and remove applied memberships through an explicit reviewed rollback CSV; keep groups by default.
+
+Next recommended step: have an operational reviewer approve or remove each candidate user assignment, then generate final checksum-pinned apply and rollback CSVs. Do not run `--apply` or consider enforcement until the reviewed artifacts and local verification results are accepted.

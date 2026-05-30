@@ -278,3 +278,33 @@ Explicit local execution mode:
 ```powershell
 .\scripts\run-api-permission-staging-like-recheck.ps1 -ExecuteLocal
 ```
+
+## API Scope Reviewed Grant Backfill Plan Tests
+
+Added `docs/api-scope-reviewed-backfill-plan.md` and sample proposal CSVs for the reviewed grant backfill phase.
+
+Coverage sequence:
+- Review latest `reports/api-permission-review.csv`.
+- Run `plan_api_scope_grants --report-csv reports/api-permission-review.csv --active-only` as a dry-run/read-only command.
+- Confirm suggested groups and group grants are documented only.
+- Confirm candidate user assignments are marked as requiring human review.
+- Confirm rollback mapping is represented by an explicit rollback CSV sample.
+- Run local regression checks without deploying, connecting to, or modifying `.240`.
+
+Validation commands:
+```powershell
+.\scripts\check-local.ps1
+.\scripts\run-api-permission-staging-like-recheck.ps1 -ExecuteLocal
+.\scripts\run-smoke-tests.ps1
+.\scripts\run-csrf-tests.ps1
+$testsPath = (Resolve-Path "tests").Path
+$pytestIniPath = (Resolve-Path "pytest.ini").Path
+$apiPermissionLogReviewPath = (Resolve-Path "scripts/api_permission_log_review.py").Path
+docker-compose -f docker-compose.yml -f docker-compose.volume.yml run --rm `
+  -v "${testsPath}:/app/tests:ro" `
+  -v "${pytestIniPath}:/app/pytest.ini:ro" `
+  -v "${apiPermissionLogReviewPath}:/app/scripts/api_permission_log_review.py:ro" `
+  web pytest tests/smoke tests/integration tests/security
+```
+
+This phase remains proposal-only. It must not run `--apply`, must not enable `API_PERMISSION_MODE=enforce`, must not change the default `API_PERMISSION_MODE=off`, and must not change default API behavior.

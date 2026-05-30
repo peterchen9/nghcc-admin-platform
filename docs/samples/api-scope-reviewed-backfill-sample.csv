@@ -1,0 +1,17 @@
+action,group,username,scope,plan_version,reason,reviewed_by,reviewed_at,ticket,rollback_of,notes
+create_group,api_hymns_readers,,,1,Backfill proposal role group from report-only review,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Sample only; do not apply until reviewer metadata is replaced
+create_group,api_hymns_editors,,,1,Backfill proposal role group from report-only review,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Sample only; do not apply until reviewer metadata is replaced
+create_group,api_hymns_uploaders,,,1,Backfill proposal role group from report-only review,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Sample only; do not apply until reviewer metadata is replaced
+create_group,api_humnos_readers,,,1,Backfill proposal role group from report-only review,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Sample only; do not apply until reviewer metadata is replaced
+create_group,api_humnos_operators,,,1,Backfill proposal role group from report-only review,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Sample only; do not apply until reviewer metadata is replaced
+create_group_grant,api_hymns_readers,,api:hymns:read,1,Backfill proposal read role grant,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Suggested by plan_api_scope_grants dry-run
+create_group_grant,api_hymns_editors,,api:hymns:read,1,Backfill proposal editor read grant,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Suggested by plan_api_scope_grants dry-run
+create_group_grant,api_hymns_editors,,api:hymns:write,1,Backfill proposal editor write grant,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Suggested by plan_api_scope_grants dry-run
+create_group_grant,api_hymns_uploaders,,api:hymns:read,1,Backfill proposal uploader read grant,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Suggested by plan_api_scope_grants dry-run
+create_group_grant,api_hymns_uploaders,,api:hymns:upload,1,Backfill proposal uploader upload grant,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Suggested by plan_api_scope_grants dry-run
+create_group_grant,api_humnos_readers,,api:humnos:read,1,Backfill proposal humnos reader grant,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Suggested by plan_api_scope_grants dry-run
+create_group_grant,api_humnos_operators,,api:humnos:read,1,Backfill proposal humnos operator read grant,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Suggested by plan_api_scope_grants dry-run
+create_group_grant,api_humnos_operators,,api:humnos:write,1,Backfill proposal humnos operator write grant,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Suggested by plan_api_scope_grants dry-run
+assign_user_to_group,api_hymns_editors,peterchen,,1,Candidate assignment for observed missing hymn read/write scopes,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Remove this row unless reviewer approves peterchen metadata write access
+assign_user_to_group,api_hymns_uploaders,peterchen,,1,Candidate assignment for observed missing hymn upload scope,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Remove this row unless reviewer approves peterchen upload access
+assign_user_to_group,api_humnos_operators,peterchen,,1,Candidate assignment for observed missing humnos read/write scopes,REQUIRES_HUMAN_REVIEW,2026-05-31,SEC-API-BACKFILL-SAMPLE,,Remove this row unless reviewer approves peterchen humnos operator access
