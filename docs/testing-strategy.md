@@ -308,3 +308,37 @@ docker-compose -f docker-compose.yml -f docker-compose.volume.yml run --rm `
 ```
 
 This phase remains proposal-only. It must not run `--apply`, must not enable `API_PERMISSION_MODE=enforce`, must not change the default `API_PERMISSION_MODE=off`, and must not change default API behavior.
+
+## API Scope Final CSV Dry-run Review Tests
+
+Added final reviewed dry-run artifacts under `docs/reviewed/` and the review record `docs/api-scope-final-apply-dry-run-review.md`.
+
+Coverage sequence:
+- Convert sample reviewed apply and rollback CSVs into final reviewed CSVs.
+- Pin final CSVs with SHA-256 sidecar files.
+- Keep `peterchen` candidate assignments pending and out of the applyable final CSV.
+- Run `apply_api_scope_reviewed_plan` in dry-run mode with `--expected-plan-version`, `--expected-checksum`, `--reviewed-by`, and `--ticket`.
+- Run `rollback_api_scope_reviewed_plan` in dry-run mode with `--expected-checksum`, `--reviewed-by`, and `--ticket`.
+- Run local regression checks without deploying, connecting to, or modifying `.240`.
+
+Validation commands:
+```powershell
+docker-compose -f docker-compose.yml -f docker-compose.volume.yml run --rm `
+  -v "${PWD}\docs\reviewed:/app/docs/reviewed:ro" `
+  web python manage.py apply_api_scope_reviewed_plan `
+  --plan-file docs/reviewed/api-scope-final-reviewed-apply.csv `
+  --expected-plan-version 2 `
+  --expected-checksum aabbeda8c4382330281cfd897eb6562813db6beb50bc5fbcf53d093a4c473f12 `
+  --reviewed-by peterchen9 `
+  --ticket SEC-API-FINAL-CSV-DRYRUN-001
+
+docker-compose -f docker-compose.yml -f docker-compose.volume.yml run --rm `
+  -v "${PWD}\docs\reviewed:/app/docs/reviewed:ro" `
+  web python manage.py rollback_api_scope_reviewed_plan `
+  --plan-file docs/reviewed/api-scope-final-reviewed-rollback.csv `
+  --expected-checksum 45c59e89d01a9f8fdc3b04f4749a5686ac81a5918f5eefd348131c85144ad4fb `
+  --reviewed-by peterchen9 `
+  --ticket SEC-API-FINAL-CSV-DRYRUN-001
+```
+
+This phase remains dry-run only. It must not run `--apply`, must not enable `API_PERMISSION_MODE=enforce`, must not change the default `API_PERMISSION_MODE=off`, and must not change default API behavior.

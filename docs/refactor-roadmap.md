@@ -486,3 +486,28 @@ Review result from the latest local report-only CSV and `plan_api_scope_grants` 
 - Rollback: disable applied grants and remove applied memberships through an explicit reviewed rollback CSV; keep groups by default.
 
 Next recommended step: have an operational reviewer approve or remove each candidate user assignment, then generate final checksum-pinned apply and rollback CSVs. Do not run `--apply` or consider enforcement until the reviewed artifacts and local verification results are accepted.
+
+## API Scope Final CSV Dry-run Review
+
+Added `docs/api-scope-final-apply-dry-run-review.md` and final reviewed CSV artifacts:
+
+- `docs/reviewed/api-scope-final-reviewed-apply.csv`
+- `docs/reviewed/api-scope-final-reviewed-apply.csv.sha256`
+- `docs/reviewed/api-scope-final-reviewed-rollback.csv`
+- `docs/reviewed/api-scope-final-reviewed-rollback.csv.sha256`
+
+Scope:
+- No deployment, connection, or modification to `.240`.
+- No `API_PERMISSION_MODE=enforce`.
+- No `--apply`.
+- No default API behavior change.
+- No business features.
+
+Review result:
+- Final apply CSV contains five role group rows and eight group grant rows.
+- Final rollback CSV contains eight explicit `disable_group_grant` rows.
+- `peterchen` candidate assignments remain pending and were intentionally excluded from the applyable CSV artifacts.
+- Apply dry-run passed with checksum, reviewer, ticket, and plan version pinning.
+- Rollback dry-run passed with checksum, reviewer, and ticket pinning.
+
+Next recommended step: have an operational reviewer approve or reject each pending `peterchen` assignment. Any approved assignment should be handled in a separate reviewed assignment CSV with a new checksum and another dry-run review before any local apply is considered.
