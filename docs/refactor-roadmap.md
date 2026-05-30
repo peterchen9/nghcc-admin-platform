@@ -214,3 +214,36 @@ Review result:
 - Read/write/upload/download categories are documented per endpoint, including the note that `/api/humnos/download/` is classified as download/write because it has side effects and resource cost.
 
 Next recommended step: design scope storage requirements before any enforce planning. The storage design should cover user and role/group grants, effective-scope calculation, conservative staff defaults, visible superuser bypass, migration/backfill, audit output, and tests for explicit scope, inherited scope, missing scope, staff default behavior, and superuser bypass.
+
+## API Permission Scope Storage Proposal
+
+Added `docs/api-permission-scope-storage-proposal.md` as a design-only next phase.
+
+Scope:
+- No deployment, connection, or modification to `.240`.
+- No `API_PERMISSION_MODE=enforce`.
+- No default API behavior change; default remains `off`.
+- No new tables, migrations, model changes, or business features.
+- No implementation; storage is proposed only.
+
+Compared options:
+- A. New API scope model.
+- B. Reuse Django permission.
+- C. Reuse menu permission.
+
+Recommendation: adopt A, a dedicated API scope model, in a future implementation phase. It cleanly separates endpoint/method authorization from page menu visibility and Django model CRUD semantics, supports direct user grants and group grants, keeps staff defaults conservative, and keeps superuser bypass explicit in audit output.
+
+Effective-scope rule summary:
+- Superuser remains an audited bypass with `reason=superuser`.
+- Non-superuser effective scopes are the union of enabled group grants and enabled direct user grants.
+- Staff receives no API scopes by default.
+- No deny grants or wildcards in the first implementation.
+
+Migration/backfill recommendation:
+- Add canonical scopes and storage behind the existing feature flag in a later phase.
+- Backfill no grants for normal users or staff by default.
+- Backfill no grants for superusers; rely on audited bypass.
+- Create any role groups only after local/report-only review.
+- Use `API_PERMISSION_MODE=off` as the primary rollback lever.
+
+Next recommended step: review the proposal, then implement Option A with models, migrations, effective-scope tests, and an effective-scope report command while keeping default mode `off` and postponing `enforce`.
