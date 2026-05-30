@@ -125,3 +125,4 @@ PowerShell：
 3. CI 專用 `.env.test`。
 4. 不含正式密碼的測試帳號。
 5. 可在 CI 中還原 DB 與 media 的腳本。
+- Write API Permission / CSRF tests：新增 `tests/security/test_write_api_permissions.py`，盤點 `/api/hymns/*`、`/api/humnos/*`、`/users/*` 的 create/update/delete/upload/download 權限與 CSRF/session 行為。測試只固定目前行為與未來 scope 建議，不建立有效業務資料、不刪除既有資料、不連線 `.240`。建議 scopes：`api:hymns:write`、`api:hymns:upload`、`api:humnos:write`、`api:users:write`。
