@@ -16,6 +16,9 @@ from modules.accounts.models import (
 from modules.accounts.management.commands.apply_api_scope_reviewed_plan import (
     Command as ApplyApiScopeReviewedPlanCommand,
 )
+from modules.accounts.management.commands.rollback_api_scope_reviewed_plan import (
+    Command as RollbackApiScopeReviewedPlanCommand,
+)
 from nads26.api_permissions import (
     CANONICAL_API_SCOPES,
     get_effective_api_scope_decision,
@@ -38,6 +41,9 @@ def api_scope_storage_cleanup():
         'api-apply-user',
         'api-apply-service',
         'api-apply-tx-user',
+        'api-rollback-user',
+        'api-rollback-service',
+        'api-rollback-tx-user',
     ]
     group_names = [
         'api-scope-group',
@@ -45,11 +51,15 @@ def api_scope_storage_cleanup():
         'api_hymns_readers',
         'api_humnos_readers',
         'api_apply_tx_group',
+        'api_rollback_readers',
+        'api_rollback_tx_group',
     ]
     audit_tickets = [
         'SEC-API-001',
         'SEC-API-002',
         'SEC-API-TX',
+        'SEC-API-RB',
+        'SEC-API-RB-TX',
     ]
     ApiScopeGrantAudit.objects.filter(ticket__in=audit_tickets).delete()
     User.objects.filter(username__in=usernames).delete()
@@ -557,3 +567,236 @@ def test_apply_api_scope_reviewed_plan_validation_blocks_bad_plan(api_scopes, tm
         GroupApiScopeGrant.objects.count(),
         ApiScopeGrantAudit.objects.count(),
     )
+
+
+def _write_rollback_plan(path, rows):
+    path.write_text(
+        '\n'.join(
+            [
+                (
+                    'action,group,username,scope,rollback_of,reason,reviewed_by,'
+                    'reviewed_at,ticket,notes'
+                ),
+                *rows,
+            ]
+        ),
+        encoding='utf-8',
+    )
+
+
+def test_rollback_api_scope_reviewed_plan_dry_run_writes_nothing(
+    api_scopes, tmp_path
+):
+    user = User.objects.create_user(username='api-rollback-user')
+    service_user = User.objects.create_user(username='api-rollback-service')
+    group = Group.objects.create(name='api_rollback_readers')
+    user.groups.add(group)
+    GroupApiScopeGrant.objects.create(
+        group=group,
+        scope=api_scopes['api:humnos:read'],
+    )
+    UserApiScopeGrant.objects.create(
+        user=service_user,
+        scope=api_scopes['api:humnos:read'],
+    )
+    plan_csv = tmp_path / 'reviewed-api-scope-rollback-plan.csv'
+    _write_rollback_plan(
+        plan_csv,
+        [
+            (
+                'remove_user_from_group,api_rollback_readers,api-rollback-user,,'
+                'apply-row-3,Rollback membership,peter,2026-05-30,SEC-API-RB,'
+            ),
+            (
+                'disable_group_grant,api_rollback_readers,,api:humnos:read,'
+                'apply-row-2,Rollback group grant,peter,2026-05-30,SEC-API-RB,'
+            ),
+            (
+                'disable_user_grant,,api-rollback-service,api:humnos:read,'
+                'apply-row-4,Rollback user grant,peter,2026-05-30,SEC-API-RB,'
+            ),
+        ],
+    )
+    output = io.StringIO()
+    counts_before = (
+        UserApiScopeGrant.objects.count(),
+        GroupApiScopeGrant.objects.count(),
+        ApiScopeGrantAudit.objects.count(),
+        user.groups.count(),
+    )
+
+    call_command(
+        'rollback_api_scope_reviewed_plan',
+        '--plan-file',
+        str(plan_csv),
+        stdout=output,
+    )
+
+    assert counts_before == (
+        UserApiScopeGrant.objects.count(),
+        GroupApiScopeGrant.objects.count(),
+        ApiScopeGrantAudit.objects.count(),
+        user.groups.count(),
+    )
+    rows = list(csv.DictReader(io.StringIO(output.getvalue())))
+    assert len(rows) == 3
+    assert {row['dry_run'] for row in rows} == {'true'}
+    assert {row['status'] for row in rows} == {'ok'}
+    assert all('dry-run only' in row['notes'] for row in rows)
+
+
+def test_rollback_api_scope_reviewed_plan_apply_without_confirm_writes_nothing(
+    api_scopes, tmp_path
+):
+    user = User.objects.create_user(username='api-rollback-user')
+    group = Group.objects.create(name='api_rollback_readers')
+    user.groups.add(group)
+    plan_csv = tmp_path / 'reviewed-api-scope-rollback-plan.csv'
+    _write_rollback_plan(
+        plan_csv,
+        [
+            (
+                'remove_user_from_group,api_rollback_readers,api-rollback-user,,'
+                'apply-row-3,Rollback membership,peter,2026-05-30,SEC-API-RB,'
+            ),
+        ],
+    )
+    counts_before = (ApiScopeGrantAudit.objects.count(), user.groups.count())
+
+    with pytest.raises(CommandError, match='--apply requires --confirm-rollback'):
+        call_command(
+            'rollback_api_scope_reviewed_plan',
+            '--plan-file',
+            str(plan_csv),
+            '--apply',
+        )
+
+    assert counts_before == (ApiScopeGrantAudit.objects.count(), user.groups.count())
+    assert user.groups.filter(name=group.name).exists() is True
+
+
+def test_rollback_api_scope_reviewed_plan_with_confirm_writes_audit_and_rolls_back(
+    api_scopes, tmp_path
+):
+    user = User.objects.create_user(username='api-rollback-user')
+    service_user = User.objects.create_user(username='api-rollback-service')
+    group = Group.objects.create(name='api_rollback_readers')
+    user.groups.add(group)
+    group_grant = GroupApiScopeGrant.objects.create(
+        group=group,
+        scope=api_scopes['api:humnos:read'],
+    )
+    user_grant = UserApiScopeGrant.objects.create(
+        user=service_user,
+        scope=api_scopes['api:humnos:read'],
+    )
+    plan_csv = tmp_path / 'reviewed-api-scope-rollback-plan.csv'
+    _write_rollback_plan(
+        plan_csv,
+        [
+            (
+                'remove_user_from_group,api_rollback_readers,api-rollback-user,,'
+                'apply-row-3,Rollback membership,peter,2026-05-30,SEC-API-RB,'
+            ),
+            (
+                'disable_group_grant,api_rollback_readers,,api:humnos:read,'
+                'apply-row-2,Rollback group grant,peter,2026-05-30,SEC-API-RB,'
+            ),
+            (
+                'disable_user_grant,,api-rollback-service,api:humnos:read,'
+                'apply-row-4,Rollback user grant,peter,2026-05-30,SEC-API-RB,'
+            ),
+        ],
+    )
+    output = io.StringIO()
+
+    call_command(
+        'rollback_api_scope_reviewed_plan',
+        '--plan-file',
+        str(plan_csv),
+        '--apply',
+        '--confirm-rollback',
+        stdout=output,
+    )
+
+    group_grant.refresh_from_db()
+    user_grant.refresh_from_db()
+    assert user.groups.filter(name='api_rollback_readers').exists() is False
+    assert group_grant.enabled is False
+    assert user_grant.enabled is False
+    assert Group.objects.filter(name='api_rollback_readers').exists() is True
+
+    rows = list(csv.DictReader(io.StringIO(output.getvalue())))
+    assert len(rows) == 3
+    assert {row['dry_run'] for row in rows} == {'false'}
+    assert {row['status'] for row in rows} == {'rolled_back'}
+
+    audit_rows = ApiScopeGrantAudit.objects.filter(ticket='SEC-API-RB')
+    assert audit_rows.count() == 3
+    assert {audit.action for audit in audit_rows} == {
+        'remove_user_from_group',
+        'disable_group_grant',
+        'disable_user_grant',
+    }
+    assert {audit.dry_run for audit in audit_rows} == {False}
+    assert {audit.status for audit in audit_rows} == {'rolled_back'}
+    assert {audit.rollback_of for audit in audit_rows} == {
+        'apply-row-2',
+        'apply-row-3',
+        'apply-row-4',
+    }
+    assert all(audit.previous_state is not None for audit in audit_rows)
+    assert all(audit.planned_state is not None for audit in audit_rows)
+    assert all(audit.result for audit in audit_rows)
+
+
+def test_rollback_api_scope_reviewed_plan_transaction_failure_rolls_back(
+    api_scopes, tmp_path, monkeypatch
+):
+    user = User.objects.create_user(username='api-rollback-tx-user')
+    group = Group.objects.create(name='api_rollback_tx_group')
+    user.groups.add(group)
+    grant = GroupApiScopeGrant.objects.create(
+        group=group,
+        scope=api_scopes['api:humnos:read'],
+    )
+    plan_csv = tmp_path / 'reviewed-api-scope-rollback-plan.csv'
+    _write_rollback_plan(
+        plan_csv,
+        [
+            (
+                'disable_group_grant,api_rollback_tx_group,,api:humnos:read,'
+                'apply-row-2,Rollback group grant,peter,2026-05-30,SEC-API-RB-TX,'
+            ),
+            (
+                'remove_user_from_group,api_rollback_tx_group,api-rollback-tx-user,,'
+                'apply-row-3,Rollback membership,peter,2026-05-30,SEC-API-RB-TX,'
+            ),
+        ],
+    )
+    original_execute = RollbackApiScopeReviewedPlanCommand._execute_rollback_action
+
+    def fail_after_first_write(self, row, options):
+        if (row.get('action') or '').strip() == 'remove_user_from_group':
+            raise CommandError('injected rollback transaction failure')
+        return original_execute(self, row, options)
+
+    monkeypatch.setattr(
+        RollbackApiScopeReviewedPlanCommand,
+        '_execute_rollback_action',
+        fail_after_first_write,
+    )
+
+    with pytest.raises(CommandError, match='injected rollback transaction failure'):
+        call_command(
+            'rollback_api_scope_reviewed_plan',
+            '--plan-file',
+            str(plan_csv),
+            '--apply',
+            '--confirm-rollback',
+        )
+
+    grant.refresh_from_db()
+    assert grant.enabled is True
+    assert user.groups.filter(name='api_rollback_tx_group').exists() is True
+    assert ApiScopeGrantAudit.objects.filter(ticket='SEC-API-RB-TX').exists() is False

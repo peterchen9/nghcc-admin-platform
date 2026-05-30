@@ -390,3 +390,43 @@ Safety behavior:
 - Rollback rows remain dry-run only; rollback execution should be implemented as a separately reviewed explicit command path.
 
 Next recommended step: run a local reviewed apply against disposable test data, inspect the audit CSV/database rows, then design the explicit rollback command path before any production-like use.
+
+## API Scope Reviewed Rollback Command
+
+Added `docs/api-scope-reviewed-rollback-plan.md` and the independent `rollback_api_scope_reviewed_plan` management command.
+
+Scope:
+- No deployment, connection, or modification to `.240`.
+- No `API_PERMISSION_MODE=enforce`.
+- No default API behavior change; default remains `off`.
+- No rollback inference from audit rows or report-only logs.
+- Rollback input must be a human-reviewed CSV rollback plan.
+- Dry-run remains the default.
+- Mutating rollback requires both `--apply` and `--confirm-rollback`.
+
+Reviewed rollback CSV fields:
+- `action`
+- `group`
+- `username`
+- `scope`
+- `rollback_of`
+- `reason`
+- `reviewed_by`
+- `reviewed_at`
+- `ticket`
+- `notes`
+
+Implemented rollback actions:
+- `remove_user_from_group`
+- `disable_user_grant`
+- `disable_group_grant`
+- `delete_empty_group` only when `--delete-empty-groups` is explicitly provided; groups are not deleted by default.
+
+Safety behavior:
+- Dry-run writes nothing.
+- `--apply` without `--confirm-rollback` writes nothing.
+- Confirmed rollback runs inside `transaction.atomic()`.
+- Confirmed rollback writes `ApiScopeGrantAudit` rows with `rollback_of`, previous state, planned state, result, reviewer, ticket, row number, and checksum.
+- Transaction failure rolls back all data changes and audit rows.
+
+Next recommended step: run a disposable local reviewed apply and rollback pair, inspect the resulting audit chain by `rollback_of`, and keep enforcement disabled until operational review accepts the apply/rollback/audit workflow.

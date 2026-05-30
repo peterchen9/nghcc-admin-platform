@@ -232,3 +232,23 @@ docker-compose -f docker-compose.yml -f docker-compose.volume.yml exec -T web sh
 ```
 
 This phase remains local only. It must not deploy, connect to, or modify `.240`, must not enable `API_PERMISSION_MODE=enforce`, must not change default API behavior, and must not automatically backfill grants.
+
+## API Scope Reviewed Rollback Tests
+
+Added coverage for the independent reviewed rollback command path in `tests/security/test_api_scope_storage.py`.
+
+Coverage:
+- `rollback_api_scope_reviewed_plan` defaults to dry-run and writes no groups, grants, memberships, or audit rows.
+- `--apply` without `--confirm-rollback` is rejected and writes nothing.
+- `--apply --confirm-rollback` can remove reviewed user/group memberships and disable reviewed user/group grants in disposable local test data.
+- Confirmed rollback writes `ApiScopeGrantAudit` records with `dry_run=False`, `rollback_of`, status, result, previous state, planned state, checksum, row number, reviewer, and ticket metadata.
+- Injected transaction failure rolls back membership/grant changes and audit rows.
+- Groups are not deleted by default. Optional empty-group deletion is guarded by `--delete-empty-groups`.
+
+Validation command:
+```bash
+docker cp tests nghcc-admin-web:/tmp/tests
+docker-compose -f docker-compose.yml -f docker-compose.volume.yml exec -T web sh -lc "cd /tmp && PYTHONPATH=/app DJANGO_SETTINGS_MODULE=nads26.settings pytest tests/security/test_api_scope_storage.py"
+```
+
+This phase remains local only. It must not deploy, connect to, or modify `.240`, must not enable `API_PERMISSION_MODE=enforce`, must not change default API behavior, and must not infer rollback from audit output.
