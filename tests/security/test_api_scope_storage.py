@@ -27,8 +27,11 @@ def api_scope_storage_cleanup():
         'api-superuser',
         'api-staff-user',
         'api-report-user',
+        'api-plan-user',
+        'api-plan-staff',
+        'api-plan-superuser',
     ]
-    group_names = ['api-scope-group', 'api-effective-group']
+    group_names = ['api-scope-group', 'api-effective-group', 'api_hymns_readers']
     User.objects.filter(username__in=usernames).delete()
     Group.objects.filter(name__in=group_names).delete()
     yield
@@ -164,3 +167,85 @@ def test_report_api_effective_scopes_command_is_report_only(api_scopes):
             'effective_scopes': 'api:hymns:read',
         }
     ]
+
+
+def test_plan_api_scope_grants_command_is_report_only(api_scopes, tmp_path):
+    user = User.objects.create_user(username='api-plan-user')
+    staff = User.objects.create_user(username='api-plan-staff', is_staff=True)
+    superuser = User.objects.create_superuser(
+        username='api-plan-superuser',
+        email='api-plan-superuser@example.test',
+        password='password',
+    )
+    group = Group.objects.create(name='api_hymns_readers')
+    staff.groups.add(group)
+    GroupApiScopeGrant.objects.create(
+        group=group,
+        scope=api_scopes['api:hymns:read'],
+    )
+    report_csv = tmp_path / 'api-permission-review.csv'
+    report_csv.write_text(
+        '\n'.join(
+            [
+                'time,user_id,endpoint,method,scope,decision,reason',
+                f',{user.id},/api/hymns/,GET,api:hymns:read,deny,missing_scope',
+                f',{staff.id},/api/hymns/,GET,api:hymns:read,deny,missing_scope',
+                (
+                    f',{superuser.id},/api/hymns/,POST,api:hymns:write,'
+                    'allow,superuser'
+                ),
+            ]
+        ),
+        encoding='utf-8',
+    )
+    output = io.StringIO()
+    counts_before = (
+        UserApiScopeGrant.objects.count(),
+        GroupApiScopeGrant.objects.count(),
+    )
+
+    call_command(
+        'plan_api_scope_grants',
+        '--report-csv',
+        str(report_csv),
+        stdout=output,
+    )
+
+    assert counts_before == (
+        UserApiScopeGrant.objects.count(),
+        GroupApiScopeGrant.objects.count(),
+    )
+    rows = list(csv.DictReader(io.StringIO(output.getvalue())))
+    assert {
+        'plan_type': 'user_review',
+        'principal_type': 'user',
+        'principal': 'api-plan-user',
+        'scope': 'api:hymns:read',
+        'action': 'review_need',
+        'source': 'report_only_logs',
+        'reason': 'missing_scope',
+        'notes': (
+            'Prefer assigning the user to a reviewed role group; use direct grant '
+            'only for exceptions.'
+        ),
+    } in rows
+    assert {
+        'plan_type': 'user_review',
+        'principal_type': 'user',
+        'principal': 'api-plan-staff',
+        'scope': 'api:hymns:read',
+        'action': 'covered_by_group',
+        'source': 'report_only_logs',
+        'reason': 'group_grant_preferred',
+        'notes': 'User is already covered by enabled group grants.',
+    } in rows
+    assert {
+        'plan_type': 'superuser_bypass',
+        'principal_type': 'superuser',
+        'principal': '*',
+        'scope': 'api:hymns:write',
+        'action': 'no_grant',
+        'source': 'report_only_logs',
+        'reason': 'superuser_bypass',
+        'notes': '1 report-only decision(s); keep visible in audit.',
+    } in rows

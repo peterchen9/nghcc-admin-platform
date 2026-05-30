@@ -267,3 +267,37 @@ Constraints preserved:
 - No formal grants are backfilled.
 
 Next recommended step: run local report-only comparisons using the stored effective-scope report, review which users/groups should receive explicit grants, and document a grant assignment plan before any future enforcement work.
+
+## API Scope Grant Assignment Review
+
+Added `docs/api-scope-grant-assignment-review.md` and the read-only `plan_api_scope_grants` management command.
+
+Scope:
+- No deployment, connection, or modification to `.240`.
+- No `API_PERMISSION_MODE=enforce`.
+- No default API behavior change; default remains `off`.
+- No automatic grant backfill.
+- No business features.
+
+Grant policy:
+- Superusers remain an audited bypass and should not receive backfilled grants.
+- Group grants are the preferred assignment path.
+- Direct user grants are exceptions only.
+- `is_staff=True` does not grant API scopes.
+- API scopes must not be inferred from page/menu visibility.
+
+Recommended initial role groups:
+- `api_hymns_readers`: `api:hymns:read`
+- `api_hymns_editors`: `api:hymns:read`, `api:hymns:write`
+- `api_hymns_uploaders`: `api:hymns:read`, `api:hymns:upload`
+- `api_humnos_readers`: `api:humnos:read`
+- `api_humnos_operators`: `api:humnos:read`, `api:humnos:write`
+
+Added command:
+```bash
+python backend/manage.py plan_api_scope_grants --report-csv reports/api-permission-review.csv --active-only
+```
+
+The command emits endpoint mapping, recommended group grant rows, user review rows, and superuser bypass summary rows. It reads current effective scopes and optional report-only CSV input, but does not create groups, create grants, assign users, or update any permission data.
+
+Next recommended step: run the read-only grant plan against a fresh local/report-only CSV, manually review actual users and groups, then prepare a separate reviewed apply/backfill proposal. Do not enable enforcement until grant data, tests, rollback, and audit output are reviewed.

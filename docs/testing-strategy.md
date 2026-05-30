@@ -152,3 +152,22 @@ Coverage:
 Validation commands:
 - `scripts/review-api-permission-logs.sh` or `.\scripts\review-api-permission-logs.ps1` for local Docker logs.
 - `LOG_FILE=... scripts/review-api-permission-logs.sh` or `.\scripts\review-api-permission-logs.ps1 -LogFile ...` for local log files.
+
+## API Scope Grant Assignment Review Tests
+
+Added coverage for the read-only grant assignment planning phase in `tests/security/test_api_scope_storage.py`.
+
+Coverage:
+- `report_api_effective_scopes` remains report-only and lists stored effective scopes without writing grants.
+- `plan_api_scope_grants` combines current effective scopes with optional report-only CSV observations.
+- The plan command emits endpoint mapping, group grant recommendations, user review rows, and superuser bypass rows.
+- The plan command does not create, update, or delete `UserApiScopeGrant` or `GroupApiScopeGrant` rows.
+- Staff users are not treated as having default API scopes; they must be covered by group grants or reviewed as exceptions.
+- Superuser activity remains grant-free and visible as bypass activity.
+
+Validation command:
+```bash
+pytest tests/security/test_api_scope_storage.py
+```
+
+This review phase remains local/report-only. It must not deploy, connect to, or modify `.240`, must not enable `API_PERMISSION_MODE=enforce`, and must not change default API behavior.
