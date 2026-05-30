@@ -430,3 +430,34 @@ Safety behavior:
 - Transaction failure rolls back all data changes and audit rows.
 
 Next recommended step: run a disposable local reviewed apply and rollback pair, inspect the resulting audit chain by `rollback_of`, and keep enforcement disabled until operational review accepts the apply/rollback/audit workflow.
+
+## Staging-like API Permission Report-only Recheck
+
+Added `docs/api-permission-staging-like-recheck-plan.md` and `scripts/run-api-permission-staging-like-recheck.ps1`.
+
+Scope:
+- Local staging-like planning and verification only.
+- No deployment, connection, or modification to `.240`.
+- No `API_PERMISSION_MODE=enforce`.
+- Default `API_PERMISSION_MODE=off` remains unchanged.
+- No default API behavior change.
+- No business features.
+
+Required local preconditions:
+- Latest `main`.
+- Docker named volume media via `nghcc-admin-media-data`.
+- Restored local DB.
+- Refreshed `test_*` account matrix.
+- One-off `API_PERMISSION_MODE=report-only` only for request sampling.
+
+Verification order:
+1. `check-local`.
+2. Report-only requests.
+3. CSV review.
+4. Grant plan dry-run.
+5. Disposable apply/rollback drill.
+6. Smoke, CSRF, and full local pytest recheck.
+
+The new script defaults to checklist output and requires `-ExecuteLocal` before it runs local commands. It contains no `.240` host, SSH, deploy, remote mutation, or enforce step.
+
+Next recommended step: run the staging-like recheck locally, review the generated CSV and dry-run grant plan, then decide whether a separately reviewed grant apply proposal is ready. Enforcement remains out of scope.

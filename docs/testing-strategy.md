@@ -252,3 +252,29 @@ docker-compose -f docker-compose.yml -f docker-compose.volume.yml exec -T web sh
 ```
 
 This phase remains local only. It must not deploy, connect to, or modify `.240`, must not enable `API_PERMISSION_MODE=enforce`, must not change default API behavior, and must not infer rollback from audit output.
+
+## Staging-like API Permission Report-only Recheck Tests
+
+Added `docs/api-permission-staging-like-recheck-plan.md` and the local checklist/orchestration script `scripts/run-api-permission-staging-like-recheck.ps1`.
+
+Coverage sequence:
+- `scripts/check-local.ps1`
+- `scripts/run-api-permission-report-only-check.ps1`
+- CSV decision/reason review for `reports/api-permission-review.csv`
+- `plan_api_scope_grants` dry-run against the report-only CSV with local `reports` mounted into the one-off container
+- `scripts/run-api-scope-apply-rollback-drill.ps1`
+- `scripts/run-smoke-tests.ps1`
+- `scripts/run-csrf-tests.ps1`
+- full local `pytest tests/smoke tests/integration tests/security` with local `tests`, `pytest.ini`, and `scripts/api_permission_log_review.py` mounted into the one-off test container
+
+The recheck requires local staging-like preconditions: latest `main`, named volume media, restored DB, refreshed `test_*` account matrix, and one-off `API_PERMISSION_MODE=report-only` for request sampling only. It remains local-only: no `.240`, no `enforce`, no default API behavior change, and no business features.
+
+Checklist mode:
+```powershell
+.\scripts\run-api-permission-staging-like-recheck.ps1
+```
+
+Explicit local execution mode:
+```powershell
+.\scripts\run-api-permission-staging-like-recheck.ps1 -ExecuteLocal
+```
