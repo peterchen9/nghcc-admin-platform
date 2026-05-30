@@ -285,3 +285,40 @@ Implement Option A behind the existing feature flag in a later phase:
 4. Run local report-only comparison.
 5. Keep default mode `off`.
 6. Do not consider `enforce` until storage, audit, tests, and rollback have been verified.
+
+## Implementation Phase 1 Status
+
+Updated: 2026-05-30
+
+Option A phase 1 has been implemented locally with storage and report-only helpers only.
+
+Added:
+
+- `ApiScope`
+- `UserApiScopeGrant`
+- `GroupApiScopeGrant`
+- Canonical `ApiScope` seed migration for:
+  - `api:hymns:read`
+  - `api:hymns:write`
+  - `api:hymns:upload`
+  - `api:humnos:read`
+  - `api:humnos:write`
+- `get_effective_api_scopes(user)`
+- `get_effective_api_scope_decision(user, scope)`
+- `report_api_effective_scopes` management command
+
+Effective-scope phase 1 rules:
+
+1. Superusers receive an audited allow decision with `reason=superuser`, but no stored grants are backfilled.
+2. Non-superuser effective scopes are the union of enabled active group grants and enabled active direct user grants.
+3. `is_staff=True` grants no API scopes by default.
+4. Disabled grants and inactive scopes are ignored.
+5. Deny grants and wildcard scopes are not implemented.
+
+Behavior constraints preserved:
+
+- No deployment, connection, or modification to `.240`.
+- No `API_PERMISSION_MODE=enforce` enablement.
+- `API_PERMISSION_MODE` default remains `off`.
+- Existing API decorator blocking behavior is not changed by the storage helper.
+- No formal user/group grants are backfilled.

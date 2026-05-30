@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from functools import wraps
 
 from django.conf import settings
@@ -28,6 +29,16 @@ API_PERMISSION_SCOPE_MAP = {
 }
 
 
+CANONICAL_API_SCOPES = tuple(sorted(set(API_PERMISSION_SCOPE_MAP.values())))
+
+
+@dataclass(frozen=True)
+class ApiScopeDecision:
+    allowed: bool
+    reason: str
+    effective_scopes: frozenset
+
+
 def get_api_permission_mode():
     mode = getattr(settings, 'API_PERMISSION_MODE', API_PERMISSION_MODE_OFF)
     mode = str(mode).strip().lower()
@@ -38,6 +49,42 @@ def get_api_permission_mode():
 
 def api_permission_enabled():
     return get_api_permission_mode() != API_PERMISSION_MODE_OFF
+
+
+def get_effective_api_scopes(user):
+    """Return explicit stored scopes from active user and group grants."""
+    if not getattr(user, 'is_authenticated', False):
+        return frozenset()
+
+    from modules.accounts.models import GroupApiScopeGrant, UserApiScopeGrant
+
+    user_scope_values = UserApiScopeGrant.objects.filter(
+        user=user,
+        enabled=True,
+        scope__active=True,
+    ).values_list('scope__scope', flat=True)
+    group_scope_values = GroupApiScopeGrant.objects.filter(
+        group__user=user,
+        enabled=True,
+        scope__active=True,
+    ).values_list('scope__scope', flat=True)
+
+    return frozenset(set(user_scope_values) | set(group_scope_values))
+
+
+def get_effective_api_scope_decision(user, scope):
+    """Report-only storage decision helper; not wired to request blocking."""
+    if not scope:
+        return ApiScopeDecision(False, 'missing_scope_mapping', frozenset())
+    if not getattr(user, 'is_authenticated', False):
+        return ApiScopeDecision(False, 'anonymous_user', frozenset())
+    if getattr(user, 'is_superuser', False):
+        return ApiScopeDecision(True, 'superuser', frozenset())
+
+    effective_scopes = get_effective_api_scopes(user)
+    if scope in effective_scopes:
+        return ApiScopeDecision(True, 'effective_scope', effective_scopes)
+    return ApiScopeDecision(False, 'missing_scope', effective_scopes)
 
 
 def user_has_api_scope(user, scope):

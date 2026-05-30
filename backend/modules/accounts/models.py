@@ -1,7 +1,93 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.contrib.auth.models import Group
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+
+class ApiScope(models.Model):
+    scope = models.CharField(max_length=100, unique=True)
+    label = models.CharField(max_length=100)
+    category = models.CharField(max_length=50)
+    description = models.TextField(blank=True, default='')
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['scope']
+
+    def __str__(self):
+        return self.scope
+
+
+class UserApiScopeGrant(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='api_scope_grants',
+    )
+    scope = models.ForeignKey(
+        ApiScope,
+        on_delete=models.CASCADE,
+        related_name='user_grants',
+    )
+    enabled = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_api_scope_grants',
+    )
+    reason = models.CharField(max_length=255, blank=True, default='')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'scope'],
+                name='unique_user_api_scope_grant',
+            ),
+        ]
+        ordering = ['user__username', 'scope__scope']
+
+    def __str__(self):
+        return f'{self.user.username}: {self.scope.scope}'
+
+
+class GroupApiScopeGrant(models.Model):
+    group = models.ForeignKey(
+        Group,
+        on_delete=models.CASCADE,
+        related_name='api_scope_grants',
+    )
+    scope = models.ForeignKey(
+        ApiScope,
+        on_delete=models.CASCADE,
+        related_name='group_grants',
+    )
+    enabled = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_group_api_scope_grants',
+    )
+    reason = models.CharField(max_length=255, blank=True, default='')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['group', 'scope'],
+                name='unique_group_api_scope_grant',
+            ),
+        ]
+        ordering = ['group__name', 'scope__scope']
+
+    def __str__(self):
+        return f'{self.group.name}: {self.scope.scope}'
 
 class UserProfile(models.Model):
     user = models.OneToOneField(

@@ -247,3 +247,23 @@ Migration/backfill recommendation:
 - Use `API_PERMISSION_MODE=off` as the primary rollback lever.
 
 Next recommended step: review the proposal, then implement Option A with models, migrations, effective-scope tests, and an effective-scope report command while keeping default mode `off` and postponing `enforce`.
+
+## API Permission Scope Storage Option A Phase 1
+
+Added the first implementation phase for Option A.
+
+Scope:
+- Added `ApiScope`, `UserApiScopeGrant`, and `GroupApiScopeGrant` in `modules.accounts`.
+- Added a migration that creates canonical scope rows for `api:hymns:read`, `api:hymns:write`, `api:hymns:upload`, `api:humnos:read`, and `api:humnos:write`.
+- Added effective-scope helpers for report/review use.
+- Added `report_api_effective_scopes` management command for local review.
+- Added `tests/security/test_api_scope_storage.py`.
+
+Constraints preserved:
+- No deployment, connection, or modification to `.240`.
+- No `API_PERMISSION_MODE=enforce`.
+- Default `API_PERMISSION_MODE=off` remains unchanged.
+- Existing API blocking/default behavior is not changed.
+- No formal grants are backfilled.
+
+Next recommended step: run local report-only comparisons using the stored effective-scope report, review which users/groups should receive explicit grants, and document a grant assignment plan before any future enforcement work.
