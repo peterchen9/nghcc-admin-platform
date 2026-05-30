@@ -182,3 +182,21 @@ Scope:
 Review fields are fixed to `time`, `user_id`, `endpoint`, `method`, `scope`, `decision`, and `reason`. The scripts filter Docker or local logs for `api_permission_report mode=report-only` and emit CSV for common API request decision/reason review.
 
 Next recommended step: collect a local report-only sample from common `/api/hymns/*` and `/api/humnos/*` requests, review deny reasons, then decide whether scope storage design is ready before any future enforce planning.
+
+## API Permission Report-only Local Sample
+
+Added local-only report-only sampling for common `/api/hymns/*` and `/api/humnos/*` endpoints:
+
+- `docs/api-permission-report-only-test-result.md`
+- `scripts/api_permission_report_only_check.py`
+- `scripts/run-api-permission-report-only-check.sh`
+- `scripts/run-api-permission-report-only-check.ps1`
+
+Scope:
+- Runs only against local Docker Compose using one-off `API_PERMISSION_MODE=report-only`.
+- Exports `reports/api-permission-review.csv` from safe log review fields.
+- Exercises read/write/upload/download paths with validation failures or nonexistent ids so formal data is not created, changed, uploaded, deleted, or downloaded.
+- Does not deploy, connect to, or modify `.240`.
+- Does not enable `enforce`, change default API behavior, add business features, or design scope storage.
+
+Latest local sample on 2026-05-30 generated `reports/api-permission-review.csv` with 16 rows: `allow/superuser=8` and `deny/missing_scope=8`.
