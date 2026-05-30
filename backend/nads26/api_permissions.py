@@ -50,6 +50,37 @@ def user_has_api_scope(user, scope):
     return scope in explicit_scopes
 
 
+def get_api_permission_decision(user, scope):
+    if not scope:
+        return False, 'missing_scope_mapping'
+    if not getattr(user, 'is_authenticated', False):
+        return False, 'anonymous_user'
+    if getattr(user, 'is_superuser', False):
+        return True, 'superuser'
+    if scope in getattr(user, 'api_scopes', ()):
+        return True, 'explicit_scope'
+    return False, 'missing_scope'
+
+
+def log_api_permission_report(mode, request, endpoint, scope, decision, reason):
+    logger.info(
+        (
+            'api_permission_report mode=%s endpoint=%s method=%s scope=%s '
+            'user_id=%s user_authenticated=%s user_is_superuser=%s '
+            'decision=%s reason=%s'
+        ),
+        mode,
+        endpoint,
+        request.method,
+        scope or '',
+        getattr(request.user, 'id', None),
+        getattr(request.user, 'is_authenticated', False),
+        getattr(request.user, 'is_superuser', False),
+        decision,
+        reason,
+    )
+
+
 def api_permission_required(scope_by_method, endpoint):
     def decorator(view_func):
         @wraps(view_func)
@@ -59,16 +90,9 @@ def api_permission_required(scope_by_method, endpoint):
                 return view_func(request, *args, **kwargs)
 
             scope = scope_by_method.get(request.method)
-            allowed = user_has_api_scope(request.user, scope)
-            logger.info(
-                'api_permission_check mode=%s endpoint=%s method=%s scope=%s user_id=%s allowed=%s',
-                mode,
-                endpoint,
-                request.method,
-                scope,
-                getattr(request.user, 'id', None),
-                allowed,
-            )
+            allowed, reason = get_api_permission_decision(request.user, scope)
+            decision = 'allow' if allowed else 'deny'
+            log_api_permission_report(mode, request, endpoint, scope, decision, reason)
 
             if mode == API_PERMISSION_MODE_REPORT_ONLY:
                 return view_func(request, *args, **kwargs)

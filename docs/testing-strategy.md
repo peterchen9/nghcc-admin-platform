@@ -135,3 +135,8 @@ PowerShell：
 - `report-only` 只記錄 scope decision，不阻擋 request。
 - 非法 mode 保守回到 `off`。
 - mapping 覆蓋 `api:hymns:read`、`api:hymns:write`、`api:hymns:upload`、`api:humnos:read`、`api:humnos:write`。
+## API Permission Report-only Log Tests
+
+本階段補強 `tests/security/test_api_permission_feature_flag.py`，驗證 `report-only` log 具備追蹤欄位：`mode`、`endpoint`、`method`、`scope`、`user_id`、`user_authenticated`、`user_is_superuser`、`decision`、`reason`。
+
+同時驗證 log 不包含 request body 中的 `password`、`token`、`csrfmiddlewaretoken` 或其值。此測試只檢查本機 log 格式，不啟用 `enforce`，不改預設 API 行為，不連線 `.240`。

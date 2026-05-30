@@ -1,17 +1,24 @@
 import json
 import logging
+from types import SimpleNamespace
 
 import pytest
 from django.contrib.auth.models import User
-from django.test import override_settings
+from django.test import RequestFactory, override_settings
+from rest_framework.response import Response
 
 from nads26.api_permissions import (
     API_PERMISSION_MODE_OFF,
     API_PERMISSION_MODE_REPORT_ONLY,
     API_PERMISSION_SCOPE_MAP,
     api_permission_enabled,
+    api_permission_required,
     get_api_permission_mode,
 )
+
+
+def _ok_view(request):
+    return Response({"ok": True})
 
 
 def _active_user_or_skip():
@@ -108,9 +115,74 @@ def test_api_permission_report_only_preserves_hymns_write_api_responses(client, 
         "delete": 404,
         "upload": 404,
     }
+    assert "api_permission_report" in caplog.text
     assert "mode=report-only" in caplog.text
     assert "scope=api:hymns:write" in caplog.text
     assert "scope=api:hymns:upload" in caplog.text
+
+
+@override_settings(API_PERMISSION_MODE="report-only")
+def test_api_permission_report_only_log_includes_required_fields(caplog):
+    request = RequestFactory().post("/api/hymns/", data={"hymntitle": ""})
+    request.user = SimpleNamespace(
+        id=123,
+        is_authenticated=True,
+        is_superuser=False,
+        api_scopes=(),
+    )
+    protected_view = api_permission_required(
+        {"POST": "api:hymns:write"},
+        "/api/hymns/",
+    )(_ok_view)
+
+    with caplog.at_level(logging.INFO, logger="nads26.api_permissions"):
+        response = protected_view(request)
+
+    assert response.status_code == 200
+    message = caplog.records[-1].getMessage()
+    assert message.startswith("api_permission_report ")
+    assert "mode=report-only" in message
+    assert "endpoint=/api/hymns/" in message
+    assert "method=POST" in message
+    assert "scope=api:hymns:write" in message
+    assert "user_id=123" in message
+    assert "user_authenticated=True" in message
+    assert "user_is_superuser=False" in message
+    assert "decision=deny" in message
+    assert "reason=missing_scope" in message
+
+
+@override_settings(API_PERMISSION_MODE="report-only")
+def test_api_permission_report_only_log_excludes_sensitive_request_data(caplog):
+    request = RequestFactory().post(
+        "/api/hymns/",
+        data={
+            "password": "secret-password",
+            "token": "secret-token",
+            "csrfmiddlewaretoken": "secret-csrf",
+        },
+    )
+    request.user = SimpleNamespace(
+        id=456,
+        is_authenticated=True,
+        is_superuser=False,
+        api_scopes=(),
+    )
+    protected_view = api_permission_required(
+        {"POST": "api:hymns:write"},
+        "/api/hymns/",
+    )(_ok_view)
+
+    with caplog.at_level(logging.INFO, logger="nads26.api_permissions"):
+        protected_view(request)
+
+    message = caplog.records[-1].getMessage()
+    assert "secret-password" not in message
+    assert "secret-token" not in message
+    assert "secret-csrf" not in message
+    assert "password" not in message
+    assert "token" not in message
+    assert "csrfmiddlewaretoken" not in message
 
 
 def test_api_permission_off_and_report_only_preserve_humnos_api_responses(client):

@@ -163,3 +163,8 @@ scripts/check-local.sh
 本階段新增 `docs/api-permission-feature-flag-plan.md`，建立 `API_PERMISSION_MODE=off|report-only|enforce` 設計與 `nads26.api_permissions` skeleton。預設 `off`，`report-only` 只記錄不阻擋，`enforce` 保留未來啟用入口但本階段不使用。
 
 已先針對 `/api/hymns/*` 與 `/api/humnos/*` 建立 scope mapping：`api:hymns:read`、`api:hymns:write`、`api:hymns:upload`、`api:humnos:read`、`api:humnos:write`。新增 `tests/security/test_api_permission_feature_flag.py` 驗證 `off` 與 `report-only` 不改變既有回應。
+## API Permission Report-only Log Format
+
+本階段新增 `docs/api-permission-reporting.md`，整理 report-only log 格式。`nads26.api_permissions` 現在以 `api_permission_report` 記錄 `mode`、`endpoint`、`method`、`scope`、`user_id`、`user_authenticated`、`user_is_superuser`、`decision`、`reason`，且不記錄 request body、query string、headers、cookies、token、password 或原始 payload。
+
+已補強 `tests/security/test_api_permission_feature_flag.py` 驗證 report-only log 欄位與敏感資料排除。此階段仍不部署、不連線 `.240`、不改正式權限資料、不啟用 `enforce`、不改預設 API 行為。
