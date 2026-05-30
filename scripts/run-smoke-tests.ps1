@@ -27,10 +27,16 @@ function Invoke-Compose {
 
     if ($ComposeCommand -eq "docker compose") {
         & docker compose @Arguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "docker compose failed with exit code $LASTEXITCODE."
+        }
         return
     }
 
     & $ComposeCommand @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "$ComposeCommand failed with exit code $LASTEXITCODE."
+    }
 }
 
 Write-Host "Checking Docker Compose containers..."
@@ -43,12 +49,14 @@ if ($dbStatus -notmatch "healthy") {
 
 $testsPath = (Resolve-Path "tests").Path
 $pytestIniPath = (Resolve-Path "pytest.ini").Path
+$apiPermissionLogReviewPath = (Resolve-Path "scripts/api_permission_log_review.py").Path
 
 Write-Host "Running smoke tests..."
 Invoke-Compose (Get-ComposeArgs @(
     "run", "--rm",
     "-v", "${testsPath}:/app/tests:ro",
     "-v", "${pytestIniPath}:/app/pytest.ini:ro",
+    "-v", "${apiPermissionLogReviewPath}:/app/scripts/api_permission_log_review.py:ro",
     "-e", "TEST_USERNAME",
     "-e", "TEST_PASSWORD",
     "-e", "TEST_USERNAME_SECONDARY",

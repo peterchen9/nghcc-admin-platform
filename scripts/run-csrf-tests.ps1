@@ -28,10 +28,16 @@ function Invoke-Compose {
     if ($ComposeCommand -eq "docker compose") {
         $allArgs = @("compose") + $Arguments
         & docker @allArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "docker compose failed with exit code $LASTEXITCODE."
+        }
         return
     }
 
     & $ComposeCommand @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "$ComposeCommand failed with exit code $LASTEXITCODE."
+    }
 }
 
 Write-Host "Checking Docker Compose containers..."
@@ -44,6 +50,7 @@ if ($dbStatus -notmatch "healthy") {
 
 $testsPath = (Resolve-Path "tests").Path
 $pytestIniPath = (Resolve-Path "pytest.ini").Path
+$apiPermissionLogReviewPath = (Resolve-Path "scripts/api_permission_log_review.py").Path
 $originalEnableCsrfProtection = $env:ENABLE_CSRF_PROTECTION
 
 Write-Host "Running CSRF-enabled tests..."
@@ -53,6 +60,7 @@ try {
         "run", "--rm",
         "-v", "${testsPath}:/app/tests:ro",
         "-v", "${pytestIniPath}:/app/pytest.ini:ro",
+        "-v", "${apiPermissionLogReviewPath}:/app/scripts/api_permission_log_review.py:ro",
         "-e", "ENABLE_CSRF_PROTECTION=True",
         "-e", "TEST_USERNAME",
         "-e", "TEST_PASSWORD",

@@ -168,3 +168,17 @@ scripts/check-local.sh
 本階段新增 `docs/api-permission-reporting.md`，整理 report-only log 格式。`nads26.api_permissions` 現在以 `api_permission_report` 記錄 `mode`、`endpoint`、`method`、`scope`、`user_id`、`user_authenticated`、`user_is_superuser`、`decision`、`reason`，且不記錄 request body、query string、headers、cookies、token、password 或原始 payload。
 
 已補強 `tests/security/test_api_permission_feature_flag.py` 驗證 report-only log 欄位與敏感資料排除。此階段仍不部署、不連線 `.240`、不改正式權限資料、不啟用 `enforce`、不改預設 API 行為。
+## API Permission Report-only Log Review
+
+Added `docs/api-permission-log-review.md`, `scripts/api_permission_log_review.py`, `scripts/review-api-permission-logs.sh`, and `scripts/review-api-permission-logs.ps1`.
+
+Scope:
+- Local/staging-like review only; do not deploy, connect to, or modify `.240`.
+- No production permission data changes.
+- No `enforce` enablement.
+- No dashboard UI.
+- No default API behavior changes.
+
+Review fields are fixed to `time`, `user_id`, `endpoint`, `method`, `scope`, `decision`, and `reason`. The scripts filter Docker or local logs for `api_permission_report mode=report-only` and emit CSV for common API request decision/reason review.
+
+Next recommended step: collect a local report-only sample from common `/api/hymns/*` and `/api/humnos/*` requests, review deny reasons, then decide whether scope storage design is ready before any future enforce planning.

@@ -12,9 +12,11 @@ ROOT_DIR="$(pwd)"
 if command -v cygpath >/dev/null 2>&1; then
   TESTS_MOUNT="$(cygpath -w "$ROOT_DIR/tests")"
   PYTEST_INI_MOUNT="$(cygpath -w "$ROOT_DIR/pytest.ini")"
+  API_PERMISSION_LOG_REVIEW_MOUNT="$(cygpath -w "$ROOT_DIR/scripts/api_permission_log_review.py")"
 else
   TESTS_MOUNT="$ROOT_DIR/tests"
   PYTEST_INI_MOUNT="$ROOT_DIR/pytest.ini"
+  API_PERMISSION_LOG_REVIEW_MOUNT="$ROOT_DIR/scripts/api_permission_log_review.py"
 fi
 
 echo "Checking Docker Compose containers..."
@@ -30,6 +32,7 @@ echo "Running smoke tests..."
 MSYS_NO_PATHCONV=1 $COMPOSE $COMPOSE_FILES run --rm \
   -v "${TESTS_MOUNT}:/app/tests:ro" \
   -v "${PYTEST_INI_MOUNT}:/app/pytest.ini:ro" \
+  -v "${API_PERMISSION_LOG_REVIEW_MOUNT}:/app/scripts/api_permission_log_review.py:ro" \
   -e TEST_USERNAME \
   -e TEST_PASSWORD \
   -e TEST_USERNAME_SECONDARY \

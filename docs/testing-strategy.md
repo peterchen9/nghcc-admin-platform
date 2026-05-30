@@ -140,3 +140,15 @@ PowerShell：
 本階段補強 `tests/security/test_api_permission_feature_flag.py`，驗證 `report-only` log 具備追蹤欄位：`mode`、`endpoint`、`method`、`scope`、`user_id`、`user_authenticated`、`user_is_superuser`、`decision`、`reason`。
 
 同時驗證 log 不包含 request body 中的 `password`、`token`、`csrfmiddlewaretoken` 或其值。此測試只檢查本機 log 格式，不啟用 `enforce`，不改預設 API 行為，不連線 `.240`。
+## API Permission Report-only Log Review Tests
+
+Added `tests/security/test_api_permission_log_review.py` for the local/staging-like log review workflow.
+
+Coverage:
+- Parses `api_permission_report mode=report-only` lines into the review fields `time`, `user_id`, `endpoint`, `method`, `scope`, `decision`, and `reason`.
+- Ignores unrelated logs and non-report-only modes.
+- Verifies the CSV output exposes only the safe review columns and does not forward request payload secrets.
+
+Validation commands:
+- `scripts/review-api-permission-logs.sh` or `.\scripts\review-api-permission-logs.ps1` for local Docker logs.
+- `LOG_FILE=... scripts/review-api-permission-logs.sh` or `.\scripts\review-api-permission-logs.ps1 -LogFile ...` for local log files.
