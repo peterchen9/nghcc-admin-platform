@@ -1,0 +1,5 @@
+action,group,username,scope,plan_version,reason,reviewed_by,reviewed_at,ticket,rollback_of,notes
+create_group,test_api_scope_drill_readers,,,1,Disposable drill reader group,peter,2026-05-30,SEC-API-DRILL,,Local disposable apply rollback drill only
+create_group_grant,test_api_scope_drill_readers,,api:humnos:read,1,Disposable drill group read grant,peter,2026-05-30,SEC-API-DRILL,,Grant limited to test group
+assign_user_to_group,test_api_scope_drill_readers,test_user,,1,Disposable drill membership,peter,2026-05-30,SEC-API-DRILL,,Assign only test_user to test group
+create_user_grant,,test_staff_nomenu,api:humnos:read,1,Disposable drill direct user exception,peter,2026-05-30,SEC-API-DRILL,,Direct exception limited to test_staff_nomenu

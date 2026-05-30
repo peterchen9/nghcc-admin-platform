@@ -1,0 +1,4 @@
+action,group,username,scope,rollback_of,reason,reviewed_by,reviewed_at,ticket,notes
+remove_user_from_group,test_api_scope_drill_readers,test_user,,abc15862e5e603ec780151538a6b2163,Disposable drill rollback membership,peter,2026-05-30,SEC-API-DRILL-RB,Remove only test_user from test group
+disable_group_grant,test_api_scope_drill_readers,,api:humnos:read,3ada8ef54afc763a931f39fa25f089f4,Disposable drill rollback group grant,peter,2026-05-30,SEC-API-DRILL-RB,Disable test group grant
+disable_user_grant,,test_staff_nomenu,api:humnos:read,8ff83417cb3ee4b2ffaa8ce5848476db,Disposable drill rollback user grant,peter,2026-05-30,SEC-API-DRILL-RB,Disable test_staff_nomenu direct grant

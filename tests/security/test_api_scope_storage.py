@@ -44,6 +44,8 @@ def api_scope_storage_cleanup():
         'api-rollback-user',
         'api-rollback-service',
         'api-rollback-tx-user',
+        'test_user',
+        'test_staff_nomenu',
     ]
     group_names = [
         'api-scope-group',
@@ -53,6 +55,7 @@ def api_scope_storage_cleanup():
         'api_apply_tx_group',
         'api_rollback_readers',
         'api_rollback_tx_group',
+        'test_api_scope_drill_readers',
     ]
     audit_tickets = [
         'SEC-API-001',
@@ -60,6 +63,8 @@ def api_scope_storage_cleanup():
         'SEC-API-TX',
         'SEC-API-RB',
         'SEC-API-RB-TX',
+        'SEC-API-DRILL',
+        'SEC-API-DRILL-RB',
     ]
     ApiScopeGrantAudit.objects.filter(ticket__in=audit_tickets).delete()
     User.objects.filter(username__in=usernames).delete()
@@ -748,6 +753,122 @@ def test_rollback_api_scope_reviewed_plan_with_confirm_writes_audit_and_rolls_ba
     assert all(audit.previous_state is not None for audit in audit_rows)
     assert all(audit.planned_state is not None for audit in audit_rows)
     assert all(audit.result for audit in audit_rows)
+
+
+def test_disposable_apply_rollback_drill_verifies_rollback_of_chain(
+    api_scopes, tmp_path
+):
+    user = User.objects.create_user(username='test_user')
+    service_user = User.objects.create_user(username='test_staff_nomenu', is_staff=True)
+    apply_csv = tmp_path / 'api-scope-disposable-reviewed-apply.csv'
+    apply_csv.write_text(
+        '\n'.join(
+            [
+                (
+                    'action,group,username,scope,plan_version,reason,reviewed_by,reviewed_at,'
+                    'ticket,rollback_of,notes'
+                ),
+                (
+                    'create_group,test_api_scope_drill_readers,,,1,'
+                    'Disposable drill reader group,peter,2026-05-30,SEC-API-DRILL,,'
+                ),
+                (
+                    'create_group_grant,test_api_scope_drill_readers,,api:humnos:read,'
+                    '1,Disposable drill group read grant,peter,2026-05-30,'
+                    'SEC-API-DRILL,,'
+                ),
+                (
+                    'assign_user_to_group,test_api_scope_drill_readers,test_user,,'
+                    '1,Disposable drill membership,peter,2026-05-30,SEC-API-DRILL,,'
+                ),
+                (
+                    'create_user_grant,,test_staff_nomenu,api:humnos:read,'
+                    '1,Disposable drill direct user exception,peter,2026-05-30,'
+                    'SEC-API-DRILL,,'
+                ),
+            ]
+        ),
+        encoding='utf-8',
+    )
+    apply_output = io.StringIO()
+
+    call_command(
+        'apply_api_scope_reviewed_plan',
+        '--plan-file',
+        str(apply_csv),
+        '--apply',
+        '--confirm-apply',
+        stdout=apply_output,
+    )
+
+    apply_rows = {
+        row['action']: row['audit_event']
+        for row in csv.DictReader(io.StringIO(apply_output.getvalue()))
+    }
+    rollback_csv = tmp_path / 'api-scope-disposable-reviewed-rollback.csv'
+    _write_rollback_plan(
+        rollback_csv,
+        [
+            (
+                'remove_user_from_group,test_api_scope_drill_readers,test_user,,'
+                f'{apply_rows["assign_user_to_group"]},'
+                'Disposable drill rollback membership,peter,2026-05-30,'
+                'SEC-API-DRILL-RB,'
+            ),
+            (
+                'disable_group_grant,test_api_scope_drill_readers,,api:humnos:read,'
+                f'{apply_rows["create_group_grant"]},'
+                'Disposable drill rollback group grant,peter,2026-05-30,'
+                'SEC-API-DRILL-RB,'
+            ),
+            (
+                'disable_user_grant,,test_staff_nomenu,api:humnos:read,'
+                f'{apply_rows["create_user_grant"]},'
+                'Disposable drill rollback user grant,peter,2026-05-30,'
+                'SEC-API-DRILL-RB,'
+            ),
+        ],
+    )
+
+    call_command(
+        'rollback_api_scope_reviewed_plan',
+        '--plan-file',
+        str(rollback_csv),
+        '--apply',
+        '--confirm-rollback',
+    )
+
+    group = Group.objects.get(name='test_api_scope_drill_readers')
+    assert user.groups.filter(name=group.name).exists() is False
+    assert not GroupApiScopeGrant.objects.filter(group=group, enabled=True).exists()
+    assert not UserApiScopeGrant.objects.filter(user=service_user, enabled=True).exists()
+    assert GroupApiScopeGrant.objects.filter(
+        group=group,
+        scope=api_scopes['api:humnos:read'],
+        enabled=False,
+    ).exists()
+    assert UserApiScopeGrant.objects.filter(
+        user=service_user,
+        scope=api_scopes['api:humnos:read'],
+        enabled=False,
+    ).exists()
+
+    apply_event_ids = set(
+        ApiScopeGrantAudit.objects.filter(ticket='SEC-API-DRILL').values_list(
+            'event_id',
+            flat=True,
+        )
+    )
+    rollback_events = ApiScopeGrantAudit.objects.filter(
+        ticket='SEC-API-DRILL-RB'
+    )
+    assert rollback_events.count() == 3
+    assert {event.rollback_of for event in rollback_events} == {
+        apply_rows['assign_user_to_group'],
+        apply_rows['create_group_grant'],
+        apply_rows['create_user_grant'],
+    }
+    assert {event.rollback_of for event in rollback_events} <= apply_event_ids
 
 
 def test_rollback_api_scope_reviewed_plan_transaction_failure_rolls_back(
