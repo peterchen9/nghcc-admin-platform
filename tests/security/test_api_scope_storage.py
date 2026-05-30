@@ -9,6 +9,7 @@ from django.db import IntegrityError, transaction
 
 from modules.accounts.models import (
     ApiScope,
+    ApiScopeGrantAudit,
     GroupApiScopeGrant,
     UserApiScopeGrant,
 )
@@ -267,24 +268,24 @@ def test_apply_api_scope_reviewed_plan_dry_run_writes_nothing(api_scopes, tmp_pa
         '\n'.join(
             [
                 (
-                    'action,group,username,scope,reason,reviewed_by,reviewed_at,'
+                    'action,group,username,scope,plan_version,reason,reviewed_by,reviewed_at,'
                     'ticket,rollback_of,notes'
                 ),
                 (
-                    'create_group,api_humnos_readers,,,Approved reader role,'
+                    'create_group,api_humnos_readers,,,1,Approved reader role,'
                     'peter,2026-05-30,SEC-API-001,,'
                 ),
                 (
                     'create_group_grant,api_humnos_readers,,api:humnos:read,'
-                    'Approved reader scope,peter,2026-05-30,SEC-API-001,,'
+                    '1,Approved reader scope,peter,2026-05-30,SEC-API-001,,'
                 ),
                 (
                     'assign_user_to_group,api_humnos_readers,api-apply-user,,'
-                    'Observed read need,peter,2026-05-30,SEC-API-001,,'
+                    '1,Observed read need,peter,2026-05-30,SEC-API-001,,'
                 ),
                 (
                     'create_user_grant,,api-apply-service,api:humnos:read,'
-                    'Temporary documented exception,peter,2026-05-30,'
+                    '1,Temporary documented exception,peter,2026-05-30,'
                     'SEC-API-002,,'
                 ),
             ]
@@ -296,6 +297,7 @@ def test_apply_api_scope_reviewed_plan_dry_run_writes_nothing(api_scopes, tmp_pa
         Group.objects.count(),
         UserApiScopeGrant.objects.count(),
         GroupApiScopeGrant.objects.count(),
+        ApiScopeGrantAudit.objects.count(),
         user.groups.count(),
         service_user.groups.count(),
     )
@@ -311,6 +313,7 @@ def test_apply_api_scope_reviewed_plan_dry_run_writes_nothing(api_scopes, tmp_pa
         Group.objects.count(),
         UserApiScopeGrant.objects.count(),
         GroupApiScopeGrant.objects.count(),
+        ApiScopeGrantAudit.objects.count(),
         user.groups.count(),
         service_user.groups.count(),
     )
@@ -319,6 +322,9 @@ def test_apply_api_scope_reviewed_plan_dry_run_writes_nothing(api_scopes, tmp_pa
     assert len(rows) == 4
     assert {row['dry_run'] for row in rows} == {'true'}
     assert {row['status'] for row in rows} == {'ok'}
+    assert {row['plan_version'] for row in rows} == {'1'}
+    assert all(len(row['plan_checksum']) == 64 for row in rows)
+    assert all(len(row['audit_event']) == 32 for row in rows)
     assert {
         'create_group',
         'create_group_grant',
@@ -336,12 +342,12 @@ def test_apply_api_scope_reviewed_plan_apply_is_disabled(api_scopes, tmp_path):
         '\n'.join(
             [
                 (
-                    'action,group,username,scope,reason,reviewed_by,reviewed_at,'
+                    'action,group,username,scope,plan_version,reason,reviewed_by,reviewed_at,'
                     'ticket,rollback_of,notes'
                 ),
                 (
                     'assign_user_to_group,api_humnos_readers,api-apply-user,,'
-                    'Observed read need,peter,2026-05-30,SEC-API-001,,'
+                    '1,Observed read need,peter,2026-05-30,SEC-API-001,,'
                 ),
             ]
         ),
@@ -350,6 +356,7 @@ def test_apply_api_scope_reviewed_plan_apply_is_disabled(api_scopes, tmp_path):
     counts_before = (
         UserApiScopeGrant.objects.count(),
         GroupApiScopeGrant.objects.count(),
+        ApiScopeGrantAudit.objects.count(),
         user.groups.count(),
     )
 
@@ -364,6 +371,44 @@ def test_apply_api_scope_reviewed_plan_apply_is_disabled(api_scopes, tmp_path):
     assert counts_before == (
         UserApiScopeGrant.objects.count(),
         GroupApiScopeGrant.objects.count(),
+        ApiScopeGrantAudit.objects.count(),
         user.groups.count(),
     )
     assert user.groups.filter(name=group.name).exists() is False
+
+
+def test_apply_api_scope_reviewed_plan_validation_blocks_bad_plan(api_scopes, tmp_path):
+    plan_csv = tmp_path / 'bad-reviewed-api-scope-plan.csv'
+    plan_csv.write_text(
+        '\n'.join(
+            [
+                (
+                    'action,group,username,scope,plan_version,reason,reviewed_by,reviewed_at,'
+                    'ticket,rollback_of,notes'
+                ),
+                (
+                    'rollback_group_grant,api_humnos_readers,,api:humnos:read,'
+                    'not-a-number,,peter,2026-05-30,,,'
+                ),
+            ]
+        ),
+        encoding='utf-8',
+    )
+    counts_before = (
+        UserApiScopeGrant.objects.count(),
+        GroupApiScopeGrant.objects.count(),
+        ApiScopeGrantAudit.objects.count(),
+    )
+
+    with pytest.raises(CommandError, match='reviewed plan validation failed'):
+        call_command(
+            'apply_api_scope_reviewed_plan',
+            '--plan-file',
+            str(plan_csv),
+        )
+
+    assert counts_before == (
+        UserApiScopeGrant.objects.count(),
+        GroupApiScopeGrant.objects.count(),
+        ApiScopeGrantAudit.objects.count(),
+    )

@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import (
     ApiScope,
+    ApiScopeGrantAudit,
     GroupApiScopeGrant,
     SystemSetting,
     UserApiScopeGrant,
@@ -27,6 +28,28 @@ class GroupApiScopeGrantAdmin(admin.ModelAdmin):
     list_display = ('group', 'scope', 'enabled', 'created_at', 'created_by')
     list_filter = ('enabled', 'scope')
     search_fields = ('group__name', 'scope__scope', 'reason')
+
+
+@admin.register(ApiScopeGrantAudit)
+class ApiScopeGrantAuditAdmin(admin.ModelAdmin):
+    list_display = (
+        'event_id',
+        'plan_version',
+        'action',
+        'status',
+        'dry_run',
+        'ticket',
+        'created_at',
+    )
+    list_filter = ('dry_run', 'status', 'action')
+    search_fields = (
+        'event_id',
+        'plan_checksum',
+        'principal_name',
+        'ticket',
+        'reviewed_by',
+    )
+    readonly_fields = ('created_at',)
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):

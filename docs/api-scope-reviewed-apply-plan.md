@@ -29,6 +29,7 @@ Required CSV columns:
 | `group` | Conditional | Django group name for group creation, group grants, and user assignment. |
 | `username` | Conditional | User username for user grants and user-to-group assignment. |
 | `scope` | Conditional | Canonical API scope string for grant operations. |
+| `plan_version` | Yes | Positive reviewed plan version used for checksum/audit traceability. |
 | `reason` | Yes | Human review reason; copied into future audit/grant reason fields. |
 | `reviewed_by` | Yes | Reviewer identifier. |
 | `reviewed_at` | Yes | Review timestamp/date, preferably ISO 8601. |
@@ -39,11 +40,11 @@ Required CSV columns:
 Example CSV:
 
 ```csv
-action,group,username,scope,reason,reviewed_by,reviewed_at,ticket,rollback_of,notes
-create_group,api_hymns_readers,,,"Approved reader role",peter,2026-05-30,SEC-API-001,,"Create role shell first"
-create_group_grant,api_hymns_readers,,api:hymns:read,"Approved reader scope",peter,2026-05-30,SEC-API-001,,"Grant after group exists"
-assign_user_to_group,api_hymns_readers,local-reader,,"Observed read need in report-only logs",peter,2026-05-30,SEC-API-001,,"No direct grant"
-create_user_grant,,service-account,api:humnos:read,"Temporary documented exception",peter,2026-05-30,SEC-API-002,,"Review expiry separately"
+action,group,username,scope,plan_version,reason,reviewed_by,reviewed_at,ticket,rollback_of,notes
+create_group,api_hymns_readers,,,1,"Approved reader role",peter,2026-05-30,SEC-API-001,,"Create role shell first"
+create_group_grant,api_hymns_readers,,api:hymns:read,1,"Approved reader scope",peter,2026-05-30,SEC-API-001,,"Grant after group exists"
+assign_user_to_group,api_hymns_readers,local-reader,,1,"Observed read need in report-only logs",peter,2026-05-30,SEC-API-001,,"No direct grant"
+create_user_grant,,service-account,api:humnos:read,1,"Temporary documented exception",peter,2026-05-30,SEC-API-002,,"Review expiry separately"
 ```
 
 Future YAML equivalent:
@@ -78,13 +79,27 @@ python backend/manage.py apply_api_scope_reviewed_plan --plan-file reviewed-api-
 Current behavior:
 
 - Parses and validates reviewed CSV rows.
-- Emits CSV dry-run audit rows with action, status, principal, scope, review metadata, and notes.
+- Computes a SHA-256 checksum for the exact reviewed plan file.
+- Emits CSV dry-run audit-preview rows with event id, plan version, checksum, action, status, principal, scope, review metadata, and notes.
 - Reads current groups, users, scopes, and existing grants only to report whether an action would create, reuse, or fail later.
 - Never creates groups.
 - Never creates grants.
 - Never assigns users.
 - Never deletes or disables anything.
 - `--apply` is reserved and deliberately raises an error in this phase.
+
+Optional validation arguments:
+
+```powershell
+python backend/manage.py apply_api_scope_reviewed_plan `
+  --plan-file reviewed-api-scope-plan.csv `
+  --expected-plan-version 1 `
+  --expected-checksum <sha256> `
+  --reviewed-by peter `
+  --ticket SEC-API-001
+```
+
+If validation fails, the command raises an error before producing a usable preview.
 
 ## Action Semantics
 
@@ -114,7 +129,7 @@ Rollback should prefer disabling/removing the specific reviewed action in a late
 
 ### audit log
 
-Every reviewed row must include `reason`, `reviewed_by`, `reviewed_at`, and `ticket`. Future apply mode should write an audit row before and after each mutation, including dry-run output, actor, target, action, previous state, new state, and result.
+Every reviewed row must include `plan_version`, `reason`, `reviewed_by`, `reviewed_at`, and `ticket`. Future apply mode should write an audit row before and after each mutation, including dry-run output, actor, target, action, previous state, new state, result, and the exact plan checksum.
 
 ### dry-run
 
@@ -143,11 +158,14 @@ Not allowed:
 Added tests in `tests/security/test_api_scope_storage.py` to confirm:
 
 - Reviewed dry-run accepts valid CSV plan rows and emits audit-preview output.
+- Audit-preview output includes plan version, checksum, and event id.
 - Dry-run does not create groups.
 - Dry-run does not create `GroupApiScopeGrant` or `UserApiScopeGrant` rows.
 - Dry-run does not assign users to groups.
+- Dry-run does not write `ApiScopeGrantAudit` rows.
 - `--apply` is disabled and writes nothing.
+- Invalid reviewed plans are rejected during validation.
 
 ## Next Step
 
-After this dry-run skeleton is reviewed, the next implementation phase can add an explicit apply mode behind a separate approval step. That phase should add transactional writes, durable audit storage, rollback execution, stricter plan versioning, and another test pass before any production-like use.
+After this dry-run skeleton is reviewed, the next implementation phase can add an explicit apply mode behind a separate approval step. That phase should add transactional writes to `ApiScopeGrantAudit`, grant mutation guarded by `transaction.atomic()`, rollback execution, and another test pass before any production-like use.

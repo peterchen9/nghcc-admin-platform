@@ -89,6 +89,65 @@ class GroupApiScopeGrant(models.Model):
     def __str__(self):
         return f'{self.group.name}: {self.scope.scope}'
 
+
+class ApiScopeGrantAudit(models.Model):
+    event_id = models.CharField(max_length=64, unique=True)
+    plan_version = models.PositiveIntegerField()
+    plan_checksum = models.CharField(max_length=64)
+    row_number = models.PositiveIntegerField()
+    action = models.CharField(max_length=64)
+    dry_run = models.BooleanField(default=True)
+    status = models.CharField(max_length=32)
+    principal_type = models.CharField(max_length=32, blank=True, default='')
+    principal_name = models.CharField(max_length=150, blank=True, default='')
+    group = models.ForeignKey(
+        Group,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='api_scope_grant_audit_events',
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='api_scope_grant_audit_events',
+    )
+    scope = models.ForeignKey(
+        ApiScope,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='grant_audit_events',
+    )
+    reviewed_by = models.CharField(max_length=150)
+    reviewed_at = models.CharField(max_length=64)
+    ticket = models.CharField(max_length=100)
+    reason = models.CharField(max_length=255)
+    rollback_of = models.CharField(max_length=100, blank=True, default='')
+    previous_state = models.JSONField(default=dict, blank=True)
+    planned_state = models.JSONField(default=dict, blank=True)
+    result = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', 'row_number']
+        indexes = [
+            models.Index(
+                fields=['plan_checksum', 'row_number'],
+                name='accounts_ap_plan_ch_b8f97e_idx',
+            ),
+            models.Index(fields=['ticket'], name='accounts_ap_ticket_4ff3b8_idx'),
+            models.Index(
+                fields=['action', 'status'],
+                name='accounts_ap_action_46a690_idx',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.event_id}: {self.action} {self.status}'
+
 class UserProfile(models.Model):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE,

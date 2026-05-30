@@ -335,3 +335,31 @@ python backend/manage.py apply_api_scope_reviewed_plan --plan-file reviewed-api-
 The command validates reviewed rows and emits dry-run audit-preview CSV rows. It reads current users, groups, scopes, and grants only to describe what would happen. It does not create groups, create grants, assign users, remove grants, or perform rollback. `--apply` is intentionally disabled and raises an error in this phase.
 
 Next recommended step: after human review of this apply contract, add a separate transactional apply implementation with durable audit logging and rollback execution tests. Keep `API_PERMISSION_MODE=off` as the default rollback lever and do not consider enforcement until apply, rollback, and audit behavior are verified.
+
+## API Scope Transactional Apply / Audit Design
+
+Added `docs/api-scope-transactional-apply-plan.md`, `ApiScopeGrantAudit`, migration `0005_api_scope_grant_audit`, and stricter dry-run validation in `apply_api_scope_reviewed_plan`.
+
+Scope:
+- No deployment, connection, or modification to `.240`.
+- No `API_PERMISSION_MODE=enforce`.
+- No default API behavior change; default remains `off`.
+- No grant, group, or user assignment writes.
+- No automatic backfill.
+- No business features.
+
+Transactional apply design:
+- Future mutating apply must validate the full plan before writes.
+- Future mutating apply must run under `transaction.atomic()`.
+- Future mutating apply must write durable `ApiScopeGrantAudit` rows with previous state, planned state, result, plan version, checksum, reviewer, and ticket metadata.
+- Rollback must be explicit reviewed rows with `rollback_of`.
+- Incident rollback can still use `API_PERMISSION_MODE=off` without deleting grant data.
+
+Current command behavior:
+- Dry-run remains the default and only supported behavior.
+- `--apply` remains intentionally disabled.
+- Reviewed CSV plans require `plan_version`, `reason`, `reviewed_by`, `reviewed_at`, and `ticket`.
+- The command computes a SHA-256 plan checksum and emits audit-preview rows.
+- Optional `--expected-checksum`, `--expected-plan-version`, `--reviewed-by`, and `--ticket` checks can pin the reviewed artifact to a ticket.
+
+Next recommended step: review this audit/rollback design, then add a separate explicitly approved transactional apply implementation that writes audit rows and grants only after expanded rollback tests pass.

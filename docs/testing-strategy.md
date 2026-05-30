@@ -190,3 +190,24 @@ pytest tests/security/test_api_scope_storage.py
 ```
 
 This phase remains local/dry-run only. It must not deploy, connect to, or modify `.240`, must not enable `API_PERMISSION_MODE=enforce`, must not change default API behavior, and must not automatically backfill grants.
+
+## API Scope Transactional Apply / Audit Tests
+
+Added coverage for the transactional apply design phase in `tests/security/test_api_scope_storage.py`.
+
+Coverage:
+- `apply_api_scope_reviewed_plan` requires reviewed plan version metadata.
+- The command computes a SHA-256 plan checksum and emits stable audit-preview event ids.
+- Dry-run still does not create Django groups.
+- Dry-run still does not create `GroupApiScopeGrant` or `UserApiScopeGrant` rows.
+- Dry-run still does not assign users to groups.
+- Dry-run does not write `ApiScopeGrantAudit` rows in this phase.
+- `--apply` remains intentionally disabled and writes nothing.
+- Malformed reviewed plans are blocked during validation before preview output is accepted.
+
+Validation command:
+```bash
+pytest tests/security/test_api_scope_storage.py
+```
+
+This phase adds audit storage only; grant/group/user mutations remain out of scope until a later explicitly approved transactional apply phase.
