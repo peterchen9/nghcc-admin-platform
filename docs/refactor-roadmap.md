@@ -511,3 +511,31 @@ Review result:
 - Rollback dry-run passed with checksum, reviewer, and ticket pinning.
 
 Next recommended step: have an operational reviewer approve or reject each pending `peterchen` assignment. Any approved assignment should be handled in a separate reviewed assignment CSV with a new checksum and another dry-run review before any local apply is considered.
+
+## API Scope Operational Review Package
+
+Added `docs/api-scope-operational-review.md` as a permission-manager review package.
+
+Scope:
+- No deployment, connection, or modification to `.240`.
+- No `API_PERMISSION_MODE=enforce`.
+- No `--apply`.
+- No grants, groups, or users modified.
+- No default API behavior change.
+
+Review package contents:
+- Scope design and effective-scope rules.
+- Role group design for hymn and humnos API scopes.
+- Explicit rollback flow and rollback mapping.
+- Audit flow for reviewed apply and rollback commands.
+- Pending `peterchen` assignments that remain excluded from the final reviewed apply CSV.
+- Approval Checklist.
+- Reject Checklist.
+- Apply Prerequisites for a later separately approved local apply phase.
+
+Current status:
+- Final group and group-grant CSV artifacts remain dry-run reviewed only.
+- `peterchen` assignments remain pending and require explicit approve/reject decisions.
+- Enforcement remains out of scope.
+
+Next recommended step: permission manager approval or rejection of role groups, group grants, and the three pending `peterchen` assignments. Any approved assignment should be handled in a separate checksum-pinned assignment package before any local apply is considered.
