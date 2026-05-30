@@ -20,6 +20,7 @@ from .serializers import HymnListSerializer, HymnDetailSerializer
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from nads26.api_permissions import api_permission_required
 from nads26.upload_validation import UploadValidationError, validate_uploaded_file
 
 
@@ -33,6 +34,7 @@ HYMN_UPLOAD_ALLOWED_EXTENSIONS = {'mp3', 'htm', 'html', 'pdf', 'mid', 'midi'}
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@api_permission_required({'GET': 'api:hymns:read', 'POST': 'api:hymns:write'}, '/api/hymns/')
 def hymn_list(request):
     """
     GET /api/hymns/
@@ -146,6 +148,10 @@ def hymn_create(request):
 
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
+@api_permission_required(
+    {'GET': 'api:hymns:read', 'PUT': 'api:hymns:write', 'DELETE': 'api:hymns:write'},
+    '/api/hymns/<pk>/',
+)
 def hymn_detail(request, pk):
     """
     GET /api/hymns/<id>/     — 詩歌詳情
@@ -384,6 +390,7 @@ def _clean_lyric(text):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser])
+@api_permission_required({'POST': 'api:hymns:upload'}, '/api/hymns/<pk>/upload/')
 def hymn_upload(request, pk):
     """
     POST /api/hymns/<id>/upload/
@@ -535,4 +542,3 @@ from django.shortcuts import render
 def hymns_page_view(request):
     """渲染詩歌資料庫前端網頁"""
     return render(request, 'hymns/hymns_page.html')
-

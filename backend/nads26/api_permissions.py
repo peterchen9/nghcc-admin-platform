@@ -1,0 +1,89 @@
+import logging
+from functools import wraps
+
+from django.conf import settings
+from rest_framework.response import Response
+
+
+logger = logging.getLogger(__name__)
+
+API_PERMISSION_MODE_OFF = 'off'
+API_PERMISSION_MODE_REPORT_ONLY = 'report-only'
+API_PERMISSION_MODE_ENFORCE = 'enforce'
+VALID_API_PERMISSION_MODES = {
+    API_PERMISSION_MODE_OFF,
+    API_PERMISSION_MODE_REPORT_ONLY,
+    API_PERMISSION_MODE_ENFORCE,
+}
+
+API_PERMISSION_SCOPE_MAP = {
+    ('GET', '/api/hymns/'): 'api:hymns:read',
+    ('POST', '/api/hymns/'): 'api:hymns:write',
+    ('GET', '/api/hymns/<pk>/'): 'api:hymns:read',
+    ('PUT', '/api/hymns/<pk>/'): 'api:hymns:write',
+    ('DELETE', '/api/hymns/<pk>/'): 'api:hymns:write',
+    ('POST', '/api/hymns/<pk>/upload/'): 'api:hymns:upload',
+    ('POST', '/api/humnos/info/'): 'api:humnos:read',
+    ('POST', '/api/humnos/download/'): 'api:humnos:write',
+}
+
+
+def get_api_permission_mode():
+    mode = getattr(settings, 'API_PERMISSION_MODE', API_PERMISSION_MODE_OFF)
+    mode = str(mode).strip().lower()
+    if mode not in VALID_API_PERMISSION_MODES:
+        return API_PERMISSION_MODE_OFF
+    return mode
+
+
+def api_permission_enabled():
+    return get_api_permission_mode() != API_PERMISSION_MODE_OFF
+
+
+def user_has_api_scope(user, scope):
+    """Future enforcement hook; intentionally conservative until scope storage is designed."""
+    if not scope or not getattr(user, 'is_authenticated', False):
+        return False
+    if getattr(user, 'is_superuser', False):
+        return True
+    explicit_scopes = getattr(user, 'api_scopes', ())
+    return scope in explicit_scopes
+
+
+def api_permission_required(scope_by_method, endpoint):
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapped(request, *args, **kwargs):
+            mode = get_api_permission_mode()
+            if mode == API_PERMISSION_MODE_OFF:
+                return view_func(request, *args, **kwargs)
+
+            scope = scope_by_method.get(request.method)
+            allowed = user_has_api_scope(request.user, scope)
+            logger.info(
+                'api_permission_check mode=%s endpoint=%s method=%s scope=%s user_id=%s allowed=%s',
+                mode,
+                endpoint,
+                request.method,
+                scope,
+                getattr(request.user, 'id', None),
+                allowed,
+            )
+
+            if mode == API_PERMISSION_MODE_REPORT_ONLY:
+                return view_func(request, *args, **kwargs)
+
+            if allowed:
+                return view_func(request, *args, **kwargs)
+
+            return Response(
+                {
+                    'detail': 'Missing API permission scope.',
+                    'required_scope': scope,
+                },
+                status=403,
+            )
+
+        return wrapped
+
+    return decorator

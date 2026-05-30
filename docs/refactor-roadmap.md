@@ -158,3 +158,8 @@ scripts/check-local.sh
 - production 部署前必須確認 HTTPS、`SESSION_COOKIE_SECURE=True`、`CSRF_COOKIE_SECURE=True`、正式 `ALLOWED_HOSTS`、正式 `CSRF_TRUSTED_ORIGINS`。
 - 移除或停用 `DisableCSRFMiddleware` 前，需通過 CSRF tests、smoke tests、POST/AJAX token 全盤點、登入/上傳/admin/會員/詩歌人工測試，並完成 DB/media 備份與 rollback 方法。
 - Write API Permission / CSRF 盤點：新增 `docs/write-api-permission-plan.md`，針對 `/api/hymns/*`、`/api/humnos/*`、`/users/*` 的 create/update/delete/upload/download 類 API 建立矩陣。此階段只盤點與補測試，不部署、不連線、不修改 `.240`，不修改正式權限資料，不改 write API 預設行為。建議後續 scope：`api:hymns:write`、`api:hymns:upload`、`api:humnos:write`、`api:users:write`。
+## API Permission Report-only / Feature Flag
+
+本階段新增 `docs/api-permission-feature-flag-plan.md`，建立 `API_PERMISSION_MODE=off|report-only|enforce` 設計與 `nads26.api_permissions` skeleton。預設 `off`，`report-only` 只記錄不阻擋，`enforce` 保留未來啟用入口但本階段不使用。
+
+已先針對 `/api/hymns/*` 與 `/api/humnos/*` 建立 scope mapping：`api:hymns:read`、`api:hymns:write`、`api:hymns:upload`、`api:humnos:read`、`api:humnos:write`。新增 `tests/security/test_api_permission_feature_flag.py` 驗證 `off` 與 `report-only` 不改變既有回應。

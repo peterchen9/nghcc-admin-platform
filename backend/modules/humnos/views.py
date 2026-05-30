@@ -15,6 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 import yt_dlp
+from nads26.api_permissions import api_permission_required
 
 
 # 暫存下載目錄
@@ -30,6 +31,7 @@ def _safe_filename(name: str) -> str:
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@api_permission_required({'POST': 'api:humnos:read'}, '/api/humnos/info/')
 def video_info(request):
     """
     取得影片資訊（標題、時長、縮圖等）
@@ -76,6 +78,7 @@ def video_info(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@api_permission_required({'POST': 'api:humnos:write'}, '/api/humnos/download/')
 def video_download(request):
     """
     下載影片/音檔並回傳檔案

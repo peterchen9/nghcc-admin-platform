@@ -126,3 +126,12 @@ PowerShell：
 4. 不含正式密碼的測試帳號。
 5. 可在 CI 中還原 DB 與 media 的腳本。
 - Write API Permission / CSRF tests：新增 `tests/security/test_write_api_permissions.py`，盤點 `/api/hymns/*`、`/api/humnos/*`、`/users/*` 的 create/update/delete/upload/download 權限與 CSRF/session 行為。測試只固定目前行為與未來 scope 建議，不建立有效業務資料、不刪除既有資料、不連線 `.240`。建議 scopes：`api:hymns:write`、`api:hymns:upload`、`api:humnos:write`、`api:users:write`。
+## API Permission Feature Flag Tests
+
+新增 `tests/security/test_api_permission_feature_flag.py`。此測試只驗證 `API_PERMISSION_MODE=off|report-only` 的相容性與 `/api/hymns/*`、`/api/humnos/*` scope mapping，不啟用 `enforce`，不修改正式權限資料，不連線 `.240`。
+
+測試重點：
+- `off` 是預設值，完全不改現有 API 回應。
+- `report-only` 只記錄 scope decision，不阻擋 request。
+- 非法 mode 保守回到 `off`。
+- mapping 覆蓋 `api:hymns:read`、`api:hymns:write`、`api:hymns:upload`、`api:humnos:read`、`api:humnos:write`。
