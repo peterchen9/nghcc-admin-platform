@@ -246,3 +246,13 @@ Global rollback rule: if any hardening phase creates flaky behavior, return to s
 - The plan lists prerequisites for xdist/per-worker DB isolation.
 - The plan recommends phased implementation order.
 - The plan includes rollback and verification for each phase.
+
+## Phase 1 Result: Initial Marker Registration and API Scope Storage Classification
+
+Updated: 2026-05-31
+
+This phase registered the pytest markers `read_only`, `mutating`, `csrf`, and `api_scope` in `pytest.ini`.
+
+Initial test classification was intentionally limited to `tests/security/test_api_scope_storage.py`. The module is marked `api_scope` and `mutating` because its tests use cleanup that deletes test-owned users, groups, and audit rows, and the cases create or modify users, groups, grants, scope active state, memberships, or audit rows. No tests in this module were marked `read_only` in this phase.
+
+Smoke and CSRF wrapper execution remains serial-only. No wrapper, workflow, fixture behavior, database isolation behavior, production permission behavior, or test assertion was changed.

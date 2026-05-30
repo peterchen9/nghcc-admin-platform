@@ -26,6 +26,9 @@ from nads26.api_permissions import (
 )
 
 
+pytestmark = [pytest.mark.api_scope, pytest.mark.mutating]
+
+
 @pytest.fixture
 def api_scope_storage_cleanup():
     usernames = [
