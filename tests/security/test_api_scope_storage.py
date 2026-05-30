@@ -13,6 +13,9 @@ from modules.accounts.models import (
     GroupApiScopeGrant,
     UserApiScopeGrant,
 )
+from modules.accounts.management.commands.apply_api_scope_reviewed_plan import (
+    Command as ApplyApiScopeReviewedPlanCommand,
+)
 from nads26.api_permissions import (
     CANONICAL_API_SCOPES,
     get_effective_api_scope_decision,
@@ -34,16 +37,25 @@ def api_scope_storage_cleanup():
         'api-plan-superuser',
         'api-apply-user',
         'api-apply-service',
+        'api-apply-tx-user',
     ]
     group_names = [
         'api-scope-group',
         'api-effective-group',
         'api_hymns_readers',
         'api_humnos_readers',
+        'api_apply_tx_group',
     ]
+    audit_tickets = [
+        'SEC-API-001',
+        'SEC-API-002',
+        'SEC-API-TX',
+    ]
+    ApiScopeGrantAudit.objects.filter(ticket__in=audit_tickets).delete()
     User.objects.filter(username__in=usernames).delete()
     Group.objects.filter(name__in=group_names).delete()
     yield
+    ApiScopeGrantAudit.objects.filter(ticket__in=audit_tickets).delete()
     User.objects.filter(username__in=usernames).delete()
     Group.objects.filter(name__in=group_names).delete()
     ApiScope.objects.filter(scope__in=CANONICAL_API_SCOPES).update(active=True)
@@ -334,7 +346,9 @@ def test_apply_api_scope_reviewed_plan_dry_run_writes_nothing(api_scopes, tmp_pa
     assert all('dry-run only' in row['notes'] for row in rows)
 
 
-def test_apply_api_scope_reviewed_plan_apply_is_disabled(api_scopes, tmp_path):
+def test_apply_api_scope_reviewed_plan_apply_without_confirm_writes_nothing(
+    api_scopes, tmp_path
+):
     user = User.objects.create_user(username='api-apply-user')
     group = Group.objects.create(name='api_humnos_readers')
     plan_csv = tmp_path / 'reviewed-api-scope-plan.csv'
@@ -360,7 +374,7 @@ def test_apply_api_scope_reviewed_plan_apply_is_disabled(api_scopes, tmp_path):
         user.groups.count(),
     )
 
-    with pytest.raises(CommandError, match='--apply is intentionally disabled'):
+    with pytest.raises(CommandError, match='--apply requires --confirm-apply'):
         call_command(
             'apply_api_scope_reviewed_plan',
             '--plan-file',
@@ -375,6 +389,137 @@ def test_apply_api_scope_reviewed_plan_apply_is_disabled(api_scopes, tmp_path):
         user.groups.count(),
     )
     assert user.groups.filter(name=group.name).exists() is False
+
+
+def test_apply_api_scope_reviewed_plan_apply_with_confirm_writes_audit_and_grants(
+    api_scopes, tmp_path
+):
+    user = User.objects.create_user(username='api-apply-user')
+    service_user = User.objects.create_user(username='api-apply-service')
+    plan_csv = tmp_path / 'reviewed-api-scope-plan.csv'
+    plan_csv.write_text(
+        '\n'.join(
+            [
+                (
+                    'action,group,username,scope,plan_version,reason,reviewed_by,reviewed_at,'
+                    'ticket,rollback_of,notes'
+                ),
+                (
+                    'create_group,api_humnos_readers,,,1,Approved reader role,'
+                    'peter,2026-05-30,SEC-API-001,,'
+                ),
+                (
+                    'create_group_grant,api_humnos_readers,,api:humnos:read,'
+                    '1,Approved reader scope,peter,2026-05-30,SEC-API-001,,'
+                ),
+                (
+                    'assign_user_to_group,api_humnos_readers,api-apply-user,,'
+                    '1,Observed read need,peter,2026-05-30,SEC-API-001,,'
+                ),
+                (
+                    'create_user_grant,,api-apply-service,api:humnos:read,'
+                    '1,Temporary documented exception,peter,2026-05-30,'
+                    'SEC-API-002,,'
+                ),
+            ]
+        ),
+        encoding='utf-8',
+    )
+    output = io.StringIO()
+
+    call_command(
+        'apply_api_scope_reviewed_plan',
+        '--plan-file',
+        str(plan_csv),
+        '--apply',
+        '--confirm-apply',
+        stdout=output,
+    )
+
+    group = Group.objects.get(name='api_humnos_readers')
+    assert user.groups.filter(name='api_humnos_readers').exists() is True
+    assert GroupApiScopeGrant.objects.filter(
+        group=group,
+        scope=api_scopes['api:humnos:read'],
+        enabled=True,
+    ).exists()
+    assert UserApiScopeGrant.objects.filter(
+        user=service_user,
+        scope=api_scopes['api:humnos:read'],
+        enabled=True,
+    ).exists()
+
+    rows = list(csv.DictReader(io.StringIO(output.getvalue())))
+    assert len(rows) == 4
+    assert {row['dry_run'] for row in rows} == {'false'}
+    assert {row['status'] for row in rows} == {'applied'}
+
+    audit_rows = ApiScopeGrantAudit.objects.filter(
+        ticket__in=['SEC-API-001', 'SEC-API-002']
+    ).order_by('row_number')
+    assert audit_rows.count() == 4
+    assert {audit.status for audit in audit_rows} == {'applied'}
+    assert {audit.dry_run for audit in audit_rows} == {False}
+    assert {audit.action for audit in audit_rows} == {
+        'create_group',
+        'create_group_grant',
+        'assign_user_to_group',
+        'create_user_grant',
+    }
+    assert all(audit.previous_state is not None for audit in audit_rows)
+    assert all(audit.planned_state is not None for audit in audit_rows)
+    assert all(audit.result for audit in audit_rows)
+
+
+def test_apply_api_scope_reviewed_plan_transaction_failure_rolls_back(
+    api_scopes, tmp_path, monkeypatch
+):
+    user = User.objects.create_user(username='api-apply-tx-user')
+    plan_csv = tmp_path / 'reviewed-api-scope-plan.csv'
+    plan_csv.write_text(
+        '\n'.join(
+            [
+                (
+                    'action,group,username,scope,plan_version,reason,reviewed_by,reviewed_at,'
+                    'ticket,rollback_of,notes'
+                ),
+                (
+                    'create_group,api_apply_tx_group,,,1,Approved tx role,'
+                    'peter,2026-05-30,SEC-API-TX,,'
+                ),
+                (
+                    'assign_user_to_group,api_apply_tx_group,api-apply-tx-user,,'
+                    '1,Observed tx need,peter,2026-05-30,SEC-API-TX,,'
+                ),
+            ]
+        ),
+        encoding='utf-8',
+    )
+    original_execute = ApplyApiScopeReviewedPlanCommand._execute_apply_action
+
+    def fail_after_first_write(self, row):
+        if (row.get('action') or '').strip() == 'assign_user_to_group':
+            raise CommandError('injected transaction failure')
+        return original_execute(self, row)
+
+    monkeypatch.setattr(
+        ApplyApiScopeReviewedPlanCommand,
+        '_execute_apply_action',
+        fail_after_first_write,
+    )
+
+    with pytest.raises(CommandError, match='injected transaction failure'):
+        call_command(
+            'apply_api_scope_reviewed_plan',
+            '--plan-file',
+            str(plan_csv),
+            '--apply',
+            '--confirm-apply',
+        )
+
+    assert Group.objects.filter(name='api_apply_tx_group').exists() is False
+    assert user.groups.filter(name='api_apply_tx_group').exists() is False
+    assert ApiScopeGrantAudit.objects.filter(ticket='SEC-API-TX').exists() is False
 
 
 def test_apply_api_scope_reviewed_plan_validation_blocks_bad_plan(api_scopes, tmp_path):

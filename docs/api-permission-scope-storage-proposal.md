@@ -322,3 +322,16 @@ Behavior constraints preserved:
 - `API_PERMISSION_MODE` default remains `off`.
 - Existing API decorator blocking behavior is not changed by the storage helper.
 - No formal user/group grants are backfilled.
+
+## Transactional Apply Phase Status
+
+Updated: 2026-05-30
+
+Reviewed transactional writes have been added for the storage model without changing API enforcement behavior.
+
+- `apply_api_scope_reviewed_plan` remains dry-run by default.
+- Mutating apply requires both `--apply` and `--confirm-apply`.
+- Apply is limited to reviewed local plan actions: create group, create group grant, create user grant, and assign user to group.
+- Each mutating row writes `ApiScopeGrantAudit` in the same database transaction.
+- Rollback action rows remain dry-run/preview-only for this phase.
+- No grants are automatically backfilled from report-only logs or existing staff/superuser status.

@@ -363,3 +363,30 @@ Current command behavior:
 - Optional `--expected-checksum`, `--expected-plan-version`, `--reviewed-by`, and `--ticket` checks can pin the reviewed artifact to a ticket.
 
 Next recommended step: review this audit/rollback design, then add a separate explicitly approved transactional apply implementation that writes audit rows and grants only after expanded rollback tests pass.
+
+## API Scope Transactional Apply Implementation
+
+Added the explicitly approved transactional apply implementation for reviewed API scope plans.
+
+Scope:
+- No deployment, connection, or modification to `.240`.
+- No `API_PERMISSION_MODE=enforce`.
+- No default API behavior change; default remains `off`.
+- No automatic backfill.
+- Mutating writes require both `--apply` and `--confirm-apply`.
+
+Implemented actions:
+- `create_group`
+- `create_group_grant`
+- `assign_user_to_group`
+- `create_user_grant`
+
+Safety behavior:
+- Dry-run remains the default and writes nothing.
+- `--apply` without `--confirm-apply` writes nothing.
+- Mutating apply runs in one `transaction.atomic()` block.
+- Each applied row writes `ApiScopeGrantAudit` with checksum, row number, reviewer, ticket, previous state, planned state, and result metadata.
+- Transaction failure rolls back all rows, including audit rows.
+- Rollback rows remain dry-run only; rollback execution should be implemented as a separately reviewed explicit command path.
+
+Next recommended step: run a local reviewed apply against disposable test data, inspect the audit CSV/database rows, then design the explicit rollback command path before any production-like use.

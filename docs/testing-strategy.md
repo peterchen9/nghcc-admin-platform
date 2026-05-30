@@ -211,3 +211,24 @@ pytest tests/security/test_api_scope_storage.py
 ```
 
 This phase adds audit storage only; grant/group/user mutations remain out of scope until a later explicitly approved transactional apply phase.
+
+## API Scope Transactional Apply Tests
+
+Updated: 2026-05-30
+
+Added coverage for the explicitly confirmed transactional apply phase in `tests/security/test_api_scope_storage.py`.
+
+Coverage:
+- Dry-run remains the default and writes no groups, grants, memberships, or audit rows.
+- `--apply` without `--confirm-apply` is rejected and writes nothing.
+- `--apply --confirm-apply` writes reviewed local test data for `create_group`, `create_group_grant`, `assign_user_to_group`, and `create_user_grant`.
+- Applied rows write `ApiScopeGrantAudit` records with `dry_run=False`, status, result, previous state, planned state, checksum, row number, reviewer, and ticket metadata.
+- Injected transaction failure rolls back groups, memberships, grants, and audit rows.
+- Rollback action rows remain dry-run/preview-only for this phase.
+
+Validation command:
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.volume.yml exec -T web sh -lc "cd /tmp && PYTHONPATH=/app DJANGO_SETTINGS_MODULE=nads26.settings pytest tests/security/test_api_scope_storage.py"
+```
+
+This phase remains local only. It must not deploy, connect to, or modify `.240`, must not enable `API_PERMISSION_MODE=enforce`, must not change default API behavior, and must not automatically backfill grants.

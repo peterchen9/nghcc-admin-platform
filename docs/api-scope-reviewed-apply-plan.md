@@ -169,3 +169,27 @@ Added tests in `tests/security/test_api_scope_storage.py` to confirm:
 ## Next Step
 
 After this dry-run skeleton is reviewed, the next implementation phase can add an explicit apply mode behind a separate approval step. That phase should add transactional writes to `ApiScopeGrantAudit`, grant mutation guarded by `transaction.atomic()`, rollback execution, and another test pass before any production-like use.
+
+## Transactional Apply Update
+
+Updated: 2026-05-30
+
+The reviewed apply command now has an explicitly confirmed mutating path:
+
+```powershell
+python backend/manage.py apply_api_scope_reviewed_plan `
+  --plan-file reviewed-api-scope-plan.csv `
+  --apply `
+  --confirm-apply
+```
+
+Default behavior is still dry-run. `--apply` alone is rejected and writes nothing.
+
+Implemented apply actions:
+
+- `create_group`
+- `create_group_grant`
+- `assign_user_to_group`
+- `create_user_grant`
+
+Every mutating apply row writes `ApiScopeGrantAudit` inside the same transaction as the group/grant/membership change. Rollback action rows remain preview-only in this phase and are rejected from mutating apply until a separately reviewed rollback command path is implemented.

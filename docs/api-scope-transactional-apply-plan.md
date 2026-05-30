@@ -144,3 +144,47 @@ Added/updated tests in `tests/security/test_api_scope_storage.py` to confirm:
 ## Next Step
 
 After this design is reviewed, the next implementation phase can add an explicitly approved transactional apply mode. That phase should write durable audit events inside a database transaction and include rollback execution tests before any use outside local review.
+
+## Transactional Apply Implementation Status
+
+Updated: 2026-05-30
+
+The explicitly approved transactional apply phase has been implemented locally.
+
+Preserved constraints:
+
+- No deployment, connection, or modification to `.240`.
+- No `API_PERMISSION_MODE=enforce` enablement.
+- Default command behavior remains dry-run.
+- No default API behavior changed.
+- No automatic grant backfill.
+- Writes happen only when both `--apply` and `--confirm-apply` are present.
+
+Implemented mutating actions:
+
+- `create_group`
+- `create_group_grant`
+- `create_user_grant`
+- `assign_user_to_group`
+
+Apply behavior:
+
+1. The command reads and validates the full reviewed CSV plan before writes.
+2. `--apply` without `--confirm-apply` raises `CommandError` and writes nothing.
+3. `--apply --confirm-apply` runs all write work inside one `transaction.atomic()` block.
+4. Each applied row writes an `ApiScopeGrantAudit` row with `dry_run=False`, `previous_state`, `planned_state`, `result`, checksum, row number, reviewer, and ticket metadata.
+5. If any row fails during apply, the whole transaction rolls back, including groups, grants, memberships, and audit rows.
+
+Rollback status:
+
+- Rollback rows remain supported for dry-run validation and preview.
+- Rollback rows are rejected in mutating apply mode for this phase.
+- Rollback execution must remain an explicit future command path or separately reviewed apply path; it is not inferred or automatically executed.
+
+Tests now cover:
+
+- Dry-run writes nothing.
+- `--apply` without `--confirm-apply` writes nothing.
+- `--apply --confirm-apply` writes reviewed test groups, grants, memberships, and audit rows.
+- Audit rows are written for applied actions.
+- Injected transaction failure rolls back prior writes and audit rows.
