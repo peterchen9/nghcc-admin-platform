@@ -301,3 +301,37 @@ python backend/manage.py plan_api_scope_grants --report-csv reports/api-permissi
 The command emits endpoint mapping, recommended group grant rows, user review rows, and superuser bypass summary rows. It reads current effective scopes and optional report-only CSV input, but does not create groups, create grants, assign users, or update any permission data.
 
 Next recommended step: run the read-only grant plan against a fresh local/report-only CSV, manually review actual users and groups, then prepare a separate reviewed apply/backfill proposal. Do not enable enforcement until grant data, tests, rollback, and audit output are reviewed.
+
+## API Scope Reviewed Apply / Backfill Design
+
+Added `docs/api-scope-reviewed-apply-plan.md` and the dry-run-only `apply_api_scope_reviewed_plan` management command skeleton.
+
+Scope:
+- No deployment, connection, or modification to `.240`.
+- No `API_PERMISSION_MODE=enforce`.
+- No default API behavior change; default remains `off`.
+- No direct grant writes.
+- No automatic backfill.
+- No business features.
+
+Reviewed plan format:
+- Executable CSV with required `action`, `group`, `username`, `scope`, `reason`, `reviewed_by`, `reviewed_at`, and `ticket` columns.
+- YAML is documented as a future human-friendly format, but the skeleton currently accepts CSV only.
+
+Supported reviewed action names:
+- `create_group`
+- `create_group_grant`
+- `assign_user_to_group`
+- `create_user_grant`
+- `rollback_group_grant`
+- `rollback_user_grant`
+- `rollback_user_group_assignment`
+
+Added command:
+```bash
+python backend/manage.py apply_api_scope_reviewed_plan --plan-file reviewed-api-scope-plan.csv
+```
+
+The command validates reviewed rows and emits dry-run audit-preview CSV rows. It reads current users, groups, scopes, and grants only to describe what would happen. It does not create groups, create grants, assign users, remove grants, or perform rollback. `--apply` is intentionally disabled and raises an error in this phase.
+
+Next recommended step: after human review of this apply contract, add a separate transactional apply implementation with durable audit logging and rollback execution tests. Keep `API_PERMISSION_MODE=off` as the default rollback lever and do not consider enforcement until apply, rollback, and audit behavior are verified.

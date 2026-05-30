@@ -171,3 +171,22 @@ pytest tests/security/test_api_scope_storage.py
 ```
 
 This review phase remains local/report-only. It must not deploy, connect to, or modify `.240`, must not enable `API_PERMISSION_MODE=enforce`, and must not change default API behavior.
+
+## API Scope Reviewed Apply Dry-run Tests
+
+Added coverage for the reviewed apply/backfill design phase in `tests/security/test_api_scope_storage.py`.
+
+Coverage:
+- `apply_api_scope_reviewed_plan` accepts a manually reviewed CSV plan.
+- The command emits dry-run audit-preview rows for `create_group`, `create_group_grant`, `assign_user_to_group`, and `create_user_grant`.
+- Dry-run does not create Django groups.
+- Dry-run does not create `GroupApiScopeGrant` or `UserApiScopeGrant` rows.
+- Dry-run does not assign users to groups.
+- `--apply` is intentionally disabled in this phase and writes nothing.
+
+Validation command:
+```bash
+pytest tests/security/test_api_scope_storage.py
+```
+
+This phase remains local/dry-run only. It must not deploy, connect to, or modify `.240`, must not enable `API_PERMISSION_MODE=enforce`, must not change default API behavior, and must not automatically backfill grants.

@@ -4,6 +4,7 @@ import io
 import pytest
 from django.contrib.auth.models import Group, User
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.db import IntegrityError, transaction
 
 from modules.accounts.models import (
@@ -30,8 +31,15 @@ def api_scope_storage_cleanup():
         'api-plan-user',
         'api-plan-staff',
         'api-plan-superuser',
+        'api-apply-user',
+        'api-apply-service',
     ]
-    group_names = ['api-scope-group', 'api-effective-group', 'api_hymns_readers']
+    group_names = [
+        'api-scope-group',
+        'api-effective-group',
+        'api_hymns_readers',
+        'api_humnos_readers',
+    ]
     User.objects.filter(username__in=usernames).delete()
     Group.objects.filter(name__in=group_names).delete()
     yield
@@ -249,3 +257,113 @@ def test_plan_api_scope_grants_command_is_report_only(api_scopes, tmp_path):
         'reason': 'superuser_bypass',
         'notes': '1 report-only decision(s); keep visible in audit.',
     } in rows
+
+
+def test_apply_api_scope_reviewed_plan_dry_run_writes_nothing(api_scopes, tmp_path):
+    user = User.objects.create_user(username='api-apply-user')
+    service_user = User.objects.create_user(username='api-apply-service')
+    plan_csv = tmp_path / 'reviewed-api-scope-plan.csv'
+    plan_csv.write_text(
+        '\n'.join(
+            [
+                (
+                    'action,group,username,scope,reason,reviewed_by,reviewed_at,'
+                    'ticket,rollback_of,notes'
+                ),
+                (
+                    'create_group,api_humnos_readers,,,Approved reader role,'
+                    'peter,2026-05-30,SEC-API-001,,'
+                ),
+                (
+                    'create_group_grant,api_humnos_readers,,api:humnos:read,'
+                    'Approved reader scope,peter,2026-05-30,SEC-API-001,,'
+                ),
+                (
+                    'assign_user_to_group,api_humnos_readers,api-apply-user,,'
+                    'Observed read need,peter,2026-05-30,SEC-API-001,,'
+                ),
+                (
+                    'create_user_grant,,api-apply-service,api:humnos:read,'
+                    'Temporary documented exception,peter,2026-05-30,'
+                    'SEC-API-002,,'
+                ),
+            ]
+        ),
+        encoding='utf-8',
+    )
+    output = io.StringIO()
+    counts_before = (
+        Group.objects.count(),
+        UserApiScopeGrant.objects.count(),
+        GroupApiScopeGrant.objects.count(),
+        user.groups.count(),
+        service_user.groups.count(),
+    )
+
+    call_command(
+        'apply_api_scope_reviewed_plan',
+        '--plan-file',
+        str(plan_csv),
+        stdout=output,
+    )
+
+    assert counts_before == (
+        Group.objects.count(),
+        UserApiScopeGrant.objects.count(),
+        GroupApiScopeGrant.objects.count(),
+        user.groups.count(),
+        service_user.groups.count(),
+    )
+    assert Group.objects.filter(name='api_humnos_readers').exists() is False
+    rows = list(csv.DictReader(io.StringIO(output.getvalue())))
+    assert len(rows) == 4
+    assert {row['dry_run'] for row in rows} == {'true'}
+    assert {row['status'] for row in rows} == {'ok'}
+    assert {
+        'create_group',
+        'create_group_grant',
+        'assign_user_to_group',
+        'create_user_grant',
+    } == {row['action'] for row in rows}
+    assert all('dry-run only' in row['notes'] for row in rows)
+
+
+def test_apply_api_scope_reviewed_plan_apply_is_disabled(api_scopes, tmp_path):
+    user = User.objects.create_user(username='api-apply-user')
+    group = Group.objects.create(name='api_humnos_readers')
+    plan_csv = tmp_path / 'reviewed-api-scope-plan.csv'
+    plan_csv.write_text(
+        '\n'.join(
+            [
+                (
+                    'action,group,username,scope,reason,reviewed_by,reviewed_at,'
+                    'ticket,rollback_of,notes'
+                ),
+                (
+                    'assign_user_to_group,api_humnos_readers,api-apply-user,,'
+                    'Observed read need,peter,2026-05-30,SEC-API-001,,'
+                ),
+            ]
+        ),
+        encoding='utf-8',
+    )
+    counts_before = (
+        UserApiScopeGrant.objects.count(),
+        GroupApiScopeGrant.objects.count(),
+        user.groups.count(),
+    )
+
+    with pytest.raises(CommandError, match='--apply is intentionally disabled'):
+        call_command(
+            'apply_api_scope_reviewed_plan',
+            '--plan-file',
+            str(plan_csv),
+            '--apply',
+        )
+
+    assert counts_before == (
+        UserApiScopeGrant.objects.count(),
+        GroupApiScopeGrant.objects.count(),
+        user.groups.count(),
+    )
+    assert user.groups.filter(name=group.name).exists() is False
