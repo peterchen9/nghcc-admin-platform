@@ -200,3 +200,17 @@ Scope:
 - Does not enable `enforce`, change default API behavior, add business features, or design scope storage.
 
 Latest local sample on 2026-05-30 generated `reports/api-permission-review.csv` with 16 rows: `allow/superuser=8` and `deny/missing_scope=8`.
+
+## API Permission Report-only CSV Review
+
+Added `docs/api-permission-scope-review.md` to review the local `reports/api-permission-review.csv` output without committing the CSV.
+
+Review result:
+
+- `allow/superuser=8`: expected; superuser bypass is explicit in the current skeleton.
+- `deny/missing_scope=8`: expected; the sampled active non-superuser has no durable API scope storage or explicit `api_scopes` assignment.
+- Covered endpoints remain `/api/hymns/`, `/api/hymns/<pk>/`, `/api/hymns/<pk>/upload/`, `/api/humnos/info/`, and `/api/humnos/download/`.
+- Current required scopes are `api:hymns:read`, `api:hymns:write`, `api:hymns:upload`, `api:humnos:read`, and `api:humnos:write`.
+- Read/write/upload/download categories are documented per endpoint, including the note that `/api/humnos/download/` is classified as download/write because it has side effects and resource cost.
+
+Next recommended step: design scope storage requirements before any enforce planning. The storage design should cover user and role/group grants, effective-scope calculation, conservative staff defaults, visible superuser bypass, migration/backfill, audit output, and tests for explicit scope, inherited scope, missing scope, staff default behavior, and superuser bypass.
