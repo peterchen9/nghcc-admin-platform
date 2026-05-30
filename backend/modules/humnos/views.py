@@ -183,8 +183,9 @@ def video_download(request):
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from nads26.menu_permissions import menu_permission_required
 
 @login_required
+@menu_permission_required('/webav/')
 def humnos_page_view(request):
     return render(request, 'humnos/humnos_page.html')
-

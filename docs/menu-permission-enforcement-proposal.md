@@ -1,6 +1,6 @@
 # Menu Permission Enforcement 設計提案
 
-更新日期：2026-05-29
+更新日期：2026-05-30
 
 ## 目標
 
@@ -40,3 +40,26 @@
 - 不建議把 `roles` 欄位當作正式授權來源，因目前多為 `*`。
 - 不建議一次移除 `MenuPermissionMiddleware`。
 - 不建議直接把 menu permission 視為 Django permission 的替代品。
+
+## P2 第四階段單一路由試行
+
+本階段比較 `/webav/` 與 `/hymns/` 後，選擇 `/webav/` 作為單一路由試行。
+
+| 候選路由 | 評估 | 結論 |
+| --- | --- | --- |
+| `/webav/` | 頁面入口單純，只有一個正式 page route；GET 頁面本身不依賴資料表寫入。其 POST API 會觸發第三方下載與暫存檔，暫不納入本階段試行。 | 適合做 page route 試行 |
+| `/hymns/` | 同一頁面連到 `/api/hymns/*` 的新增、編輯、刪除、上傳，也有 `/worship/hymns/` 別名與 HTM resource。若先套 page route，人工驗證範圍會擴大。 | 暫緩，留到 API 與寫入權限策略更完整時再評估 |
+
+### 實作邊界
+
+- 只在 `modules.humnos.views.humnos_page_view` 套用 `menu_permission_required('/webav/')`。
+- 預設仍由 `ENABLE_MENU_PERMISSION_ENFORCEMENT=False` 關閉，因此本機與既有環境的預設行為不變。
+- 不修改 DB、使用者、群組、Django permission 或 `allowed_menu_items` 資料。
+- 不套用到 `/api/humnos/*`，避免把 page route 規則誤當 API 權限模型。
+- 不部署、不連線、不修改 `.240`。
+
+### 驗證策略
+
+- 自動測試確認旗標關閉時 `/webav/` page view 維持 HTTP 200。
+- 自動測試確認旗標開啟時，有 `/webav/` menu permission 的使用者可通過，缺少者會被 `PermissionDenied` 擋下。
+- 人工測試清單獨立記錄於 `docs/menu-permission-manual-test-checklist.md`，正式啟用前需用本機帳號矩陣重跑。
