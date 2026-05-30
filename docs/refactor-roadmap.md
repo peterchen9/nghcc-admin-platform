@@ -78,6 +78,8 @@ scripts/check-local.sh
 - 第三階段已完成 menu permission 使用方式分析。
 - 第三階段已建立 `ENABLE_MENU_PERMISSION_ENFORCEMENT` PoC 開關與實驗性 helper。
 - 第三階段只新增設計驗證測試，未套用正式 view/API，未做權限重構。
+- 下一階段已整理 [view-api-enforcement-matrix.md](view-api-enforcement-matrix.md)，明確區分 Page View、Read-only API、Write API、Resource URL、Admin/User Management 的建議 enforcement。
+- 下一階段只更新文件，未修改正式權限行為，未全面套用 menu permission。
 - 盤點 Django permission。
 - 盤點 group permission。
 - 盤點 user permission。
@@ -90,7 +92,7 @@ scripts/check-local.sh
 
 - 每個自訂 URL 都有明確權限需求。
 - 選單可見不代表可操作的風險被消除或記錄。
-- P5 後續小修補已補上使用者管理 AJAX CSRF header；P2 第二階段已處理公開 HTM resource。P2 第三階段建議採用 B 起步、逐步往 C 收斂，下一步可挑單一 read-only 頁面做人工驗證計畫。
+- P5 後續小修補已補上使用者管理 AJAX CSRF header；P2 第二階段已處理公開 HTM resource。P2 第三階段建議採用 B 起步、逐步往 C 收斂；後續 matrix 已確認 API 層需獨立設計 read/write permission，不直接沿用 page route。
 - 不建議一次性重建權限模型，避免影響登入、左側選單、admin 與既有資料。
 
 ## P3：測試補強

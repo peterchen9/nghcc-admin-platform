@@ -30,6 +30,18 @@
 
 本階段未套用正式 view/API，未改現有 `MenuPermissionMiddleware` 行為。
 
+## P2 View/API Enforcement Matrix 已完成
+
+| 項目 | 狀態 |
+| --- | --- |
+| Page View enforcement | 已整理於 `docs/view-api-enforcement-matrix.md` |
+| Read-only API enforcement | 已整理於 `docs/view-api-enforcement-matrix.md` |
+| Write API enforcement | 已整理於 `docs/view-api-enforcement-matrix.md` |
+| Resource URL enforcement | 已整理於 `docs/view-api-enforcement-matrix.md` |
+| Admin/User Management enforcement | 已整理於 `docs/view-api-enforcement-matrix.md` |
+
+本階段只整理文件與後續判斷邊界，未修改正式行為。結論是 page view 可採 `login_required` 後逐頁評估 menu permission；API 層需另設 read/write 對照，不建議直接把 page route 的 menu permission 全面套到 `/api/*`。
+
 ## 後續保留風險
 
 | 風險 | 說明 | 建議階段 |
@@ -41,4 +53,4 @@
 
 ## 下一步建議
 
-先設計「menu permission 是否要進入 view/API 層」的最小策略，不建議直接全面套用。建議從 read-only 頁面開始建立測試矩陣，再挑一個低風險 URL 試行。
+維持 `ENABLE_MENU_PERMISSION_ENFORCEMENT=False`。先用低風險 read-only page route 完成人工驗證，再針對 `/api/hymns/*`、`/api/humnos/*` 分開設計 read/write API permission；使用者管理維持 superuser 為主，menu permission 只作為 UI 可見性。
