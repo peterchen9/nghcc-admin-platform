@@ -539,3 +539,64 @@ Current status:
 - Enforcement remains out of scope.
 
 Next recommended step: permission manager approval or rejection of role groups, group grants, and the three pending `peterchen` assignments. Any approved assignment should be handled in a separate checksum-pinned assignment package before any local apply is considered.
+
+## Testing Governance Closure P7-P12
+
+Updated: 2026-05-31
+
+Scope:
+- Documentation governance and decision records only.
+- No `tests/` changes.
+- No `backend/` changes.
+- No CI changes.
+- No DB changes.
+- No pytest execution.
+- No `pytest-xdist` enablement.
+
+Status:
+
+| Phase | Status | Record |
+| --- | --- | --- |
+| P7 namespace cleanup | Completed | `docs/test-hardening-plan.md` |
+| P8 marker classification | Completed | `docs/test-runbook.md` |
+| P9 marker coverage review | Completed | `docs/test-marker-coverage-review.md` |
+| P10 documentation alignment | Completed | `docs/test-runbook.md` |
+| P11 DB isolation strategy review | Completed | `docs/db-isolation-strategy.md` |
+| P12 testing governance closure | Completed | `docs/testing-baseline.md`, `docs/testing-decision-log.md` |
+
+Closure decision:
+- Current testing baseline remains serial wrapper execution against the restored local DB.
+- Marker coverage remains advisory and is not used to change wrappers or CI.
+- Parallel execution and `pytest-xdist` remain blocked until per-worker DB ownership, media/temp isolation, and marker accuracy are reviewed.
+- Unexpected empty directories `pytest.ini;C` and `tests;C` were left for a separate cleanup item requiring explicit approval; P13 below records that approved closure.
+
+## P13 Repo Root Hygiene Closure
+
+Updated: 2026-05-31
+
+Scope:
+- Repo-root hygiene only.
+- No `tests/` changes.
+- No `backend/` changes.
+- No CI changes.
+- No DB changes.
+- No pytest execution.
+- No `pytest-xdist` enablement.
+- No deploy or `.240` work.
+- No API scope assignment.
+
+Pre-cleanup confirmation:
+- `pytest.ini;C` existed and was an empty directory.
+- `tests;C` existed and was an empty directory.
+- No active references were found in `scripts/`, `.github/`, `tests/`, or `backend/`.
+- Existing docs references were historical governance notes.
+- `pytest.ini` remains the real pytest config file.
+- `pytest.ini` uses `testpaths = tests`, so pytest discovery points at the real `tests/` directory.
+
+Cleanup completed:
+- Removed `pytest.ini;C`.
+- Removed `tests;C`.
+
+Closure decision:
+- This was not a DB isolation, `pytest-xdist`, CI, deploy, `.240`, API scope assignment, or test behavior change.
+- Pytest was not executed.
