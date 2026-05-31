@@ -54,6 +54,7 @@ def permission_matrix_user_without_menu():
     return user
 
 
+@pytest.mark.read_only
 def test_read_only_api_permission_matrix_covers_hymns_and_humnos():
     assert {
         (endpoint.app, endpoint.method, endpoint.path, endpoint.is_read_only)
@@ -76,6 +77,7 @@ def test_read_only_api_permission_matrix_covers_hymns_and_humnos():
     }
 
 
+@pytest.mark.read_only
 def test_read_only_api_matrix_requires_login_but_not_page_menu_or_django_permission():
     for endpoint in read_only_endpoints():
         assert endpoint.requires_authentication is True
@@ -83,6 +85,7 @@ def test_read_only_api_matrix_requires_login_but_not_page_menu_or_django_permiss
         assert endpoint.django_permission == ""
 
 
+@pytest.mark.read_only
 def test_write_api_matrix_is_documented_but_left_without_new_enforcement():
     for endpoint in write_endpoints():
         assert endpoint.requires_authentication is True

@@ -4,6 +4,8 @@ import io
 import sys
 from pathlib import Path
 
+import pytest
+
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 PARSER_PATH = ROOT_DIR / "scripts" / "api_permission_log_review.py"
@@ -12,6 +14,9 @@ api_permission_log_review = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 sys.modules[SPEC.name] = api_permission_log_review
 SPEC.loader.exec_module(api_permission_log_review)
+
+
+pytestmark = [pytest.mark.read_only, pytest.mark.api_scope]
 
 
 def test_parse_report_only_log_line_extracts_review_fields():

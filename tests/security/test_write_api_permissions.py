@@ -46,6 +46,7 @@ def _superuser_or_skip():
     return user
 
 
+@pytest.mark.read_only
 def test_write_api_matrix_covers_requested_operations():
     assert {(item.app, item.operation) for item in WRITE_API_PERMISSION_MATRIX} == {
         ("hymns", "create"),
@@ -60,6 +61,7 @@ def test_write_api_matrix_covers_requested_operations():
     }
 
 
+@pytest.mark.read_only
 def test_write_api_matrix_preserves_current_enforcement_boundaries():
     for endpoint in WRITE_API_PERMISSION_MATRIX:
         assert endpoint.requires_authentication is True
@@ -84,6 +86,7 @@ def test_write_api_matrix_preserves_current_enforcement_boundaries():
     )
 
 
+@pytest.mark.read_only
 def test_write_api_recommended_scopes_are_explicit():
     assert {endpoint.recommended_scope for endpoint in WRITE_API_PERMISSION_MATRIX} == {
         "api:hymns:write",
@@ -148,6 +151,7 @@ def test_logged_in_user_reaches_hymns_write_api_without_new_scope_enforcement(cl
     os.getenv("ENABLE_CSRF_PROTECTION", "").lower() not in {"1", "true", "yes", "on"},
     reason="Write API CSRF behavior tests run only in ENABLE_CSRF_PROTECTION=True mode.",
 )
+@pytest.mark.csrf
 def test_csrf_enabled_rejects_write_api_requests_without_token():
     client = Client(enforce_csrf_checks=True, HTTP_HOST="localhost")
     client.force_login(_superuser_or_skip())

@@ -1,11 +1,15 @@
 from types import SimpleNamespace
 
+import pytest
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.test import RequestFactory, override_settings
 
 from modules.humnos import views as humnos_views
 from nads26.menu_permissions import menu_permission_required, user_has_menu_route
+
+
+pytestmark = pytest.mark.read_only
 
 
 class FakeAllowedMenuItems:

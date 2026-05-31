@@ -1,3 +1,9 @@
+import pytest
+
+
+pytestmark = pytest.mark.read_only
+
+
 def test_health_endpoint_reports_database_ok(client):
     response = client.get("/api/health/")
 

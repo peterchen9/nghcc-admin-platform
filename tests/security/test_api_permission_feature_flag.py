@@ -56,23 +56,31 @@ def _exercise_humnos_api(client):
     }
 
 
+@pytest.mark.read_only
+@pytest.mark.api_scope
 def test_api_permission_mode_defaults_to_off():
     assert get_api_permission_mode() == API_PERMISSION_MODE_OFF
     assert api_permission_enabled() is False
 
 
 @override_settings(API_PERMISSION_MODE="report-only")
+@pytest.mark.read_only
+@pytest.mark.api_scope
 def test_api_permission_mode_report_only_is_recognized():
     assert get_api_permission_mode() == API_PERMISSION_MODE_REPORT_ONLY
     assert api_permission_enabled() is True
 
 
 @override_settings(API_PERMISSION_MODE="unexpected")
+@pytest.mark.read_only
+@pytest.mark.api_scope
 def test_invalid_api_permission_mode_falls_back_to_off():
     assert get_api_permission_mode() == API_PERMISSION_MODE_OFF
     assert api_permission_enabled() is False
 
 
+@pytest.mark.read_only
+@pytest.mark.api_scope
 def test_api_permission_scope_mapping_covers_hymns_and_humnos():
     assert API_PERMISSION_SCOPE_MAP == {
         ("GET", "/api/hymns/"): "api:hymns:read",
@@ -122,6 +130,8 @@ def test_api_permission_report_only_preserves_hymns_write_api_responses(client, 
 
 
 @override_settings(API_PERMISSION_MODE="report-only")
+@pytest.mark.read_only
+@pytest.mark.api_scope
 def test_api_permission_report_only_log_includes_required_fields(caplog):
     request = RequestFactory().post("/api/hymns/", data={"hymntitle": ""})
     request.user = SimpleNamespace(
@@ -153,6 +163,8 @@ def test_api_permission_report_only_log_includes_required_fields(caplog):
 
 
 @override_settings(API_PERMISSION_MODE="report-only")
+@pytest.mark.read_only
+@pytest.mark.api_scope
 def test_api_permission_report_only_log_excludes_sensitive_request_data(caplog):
     request = RequestFactory().post(
         "/api/hymns/",

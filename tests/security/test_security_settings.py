@@ -1,6 +1,10 @@
 import importlib
 
+import pytest
 from django.conf import settings
+
+
+pytestmark = pytest.mark.read_only
 
 
 def test_current_security_settings_are_configured():

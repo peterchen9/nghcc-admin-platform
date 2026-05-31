@@ -1,6 +1,10 @@
 from pathlib import Path
 
+import pytest
 from django.conf import settings
+
+
+pytestmark = pytest.mark.read_only
 
 
 def test_media_root_exists_and_is_readable():

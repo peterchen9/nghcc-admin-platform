@@ -12,6 +12,7 @@ def reload_project_settings(monkeypatch, enabled):
     return importlib.reload(project_settings)
 
 
+@pytest.mark.read_only
 def test_csrf_disabled_mode_keeps_compatibility_middleware(monkeypatch):
     project_settings = reload_project_settings(monkeypatch, enabled=False)
 
@@ -20,6 +21,8 @@ def test_csrf_disabled_mode_keeps_compatibility_middleware(monkeypatch):
     assert "django.middleware.csrf.CsrfViewMiddleware" not in project_settings.MIDDLEWARE
 
 
+@pytest.mark.read_only
+@pytest.mark.csrf
 def test_csrf_enabled_mode_switches_to_django_middleware(monkeypatch):
     project_settings = reload_project_settings(monkeypatch, enabled=True)
 
@@ -32,6 +35,7 @@ def test_csrf_enabled_mode_switches_to_django_middleware(monkeypatch):
     os.getenv("ENABLE_CSRF_PROTECTION", "").lower() not in {"1", "true", "yes", "on"},
     reason="CSRF behavior tests run only in ENABLE_CSRF_PROTECTION=True mode.",
 )
+@pytest.mark.csrf
 def test_csrf_enabled_get_pages_still_open():
     client = Client(enforce_csrf_checks=True, HTTP_HOST="localhost")
 
@@ -44,6 +48,7 @@ def test_csrf_enabled_get_pages_still_open():
     os.getenv("ENABLE_CSRF_PROTECTION", "").lower() not in {"1", "true", "yes", "on"},
     reason="CSRF behavior tests run only in ENABLE_CSRF_PROTECTION=True mode.",
 )
+@pytest.mark.csrf
 def test_csrf_enabled_rejects_login_post_without_token():
     client = Client(enforce_csrf_checks=True, HTTP_HOST="localhost")
 
@@ -56,6 +61,7 @@ def test_csrf_enabled_rejects_login_post_without_token():
     os.getenv("ENABLE_CSRF_PROTECTION", "").lower() not in {"1", "true", "yes", "on"},
     reason="CSRF behavior tests run only in ENABLE_CSRF_PROTECTION=True mode.",
 )
+@pytest.mark.csrf
 def test_csrf_enabled_allows_login_post_with_valid_token():
     username = os.getenv("TEST_USERNAME")
     password = os.getenv("TEST_PASSWORD")

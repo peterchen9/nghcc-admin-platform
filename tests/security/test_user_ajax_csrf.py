@@ -13,6 +13,7 @@ def superuser_or_skip():
     return user
 
 
+@pytest.mark.csrf
 def test_user_list_page_contains_csrf_token(admin_client):
     response = admin_client.get("/users/")
 
@@ -21,6 +22,7 @@ def test_user_list_page_contains_csrf_token(admin_client):
     assert 'name="csrfmiddlewaretoken"' in content
 
 
+@pytest.mark.csrf
 def test_user_list_page_ajax_uses_csrf_header(admin_client):
     response = admin_client.get("/users/")
 
@@ -35,6 +37,7 @@ def test_user_list_page_ajax_uses_csrf_header(admin_client):
     os.getenv("ENABLE_CSRF_PROTECTION", "").lower() not in {"1", "true", "yes", "on"},
     reason="User AJAX CSRF behavior tests run only in ENABLE_CSRF_PROTECTION=True mode.",
 )
+@pytest.mark.csrf
 def test_user_management_post_without_csrf_is_rejected():
     client = Client(enforce_csrf_checks=True, HTTP_HOST="localhost")
     client.force_login(superuser_or_skip())
@@ -52,6 +55,7 @@ def test_user_management_post_without_csrf_is_rejected():
     os.getenv("ENABLE_CSRF_PROTECTION", "").lower() not in {"1", "true", "yes", "on"},
     reason="User AJAX CSRF behavior tests run only in ENABLE_CSRF_PROTECTION=True mode.",
 )
+@pytest.mark.csrf
 def test_user_management_post_with_csrf_reaches_view_without_writing_data():
     client = Client(enforce_csrf_checks=True, HTTP_HOST="localhost")
     superuser = superuser_or_skip()

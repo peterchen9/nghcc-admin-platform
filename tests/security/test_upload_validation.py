@@ -15,6 +15,7 @@ def make_upload(name, content=b"content", content_type="application/octet-stream
     UPLOAD_MAX_SIZE_MB=10,
     UPLOAD_STRICT_MIME_CHECK=False,
 )
+@pytest.mark.read_only
 def test_upload_validation_rejects_exe():
     with pytest.raises(UploadValidationError):
         validate_uploaded_file(make_upload("virus.exe"))
@@ -25,6 +26,7 @@ def test_upload_validation_rejects_exe():
     UPLOAD_MAX_SIZE_MB=1,
     UPLOAD_STRICT_MIME_CHECK=False,
 )
+@pytest.mark.read_only
 def test_upload_validation_rejects_oversized_file():
     oversized = make_upload("large.pdf", b"x" * (1024 * 1024 + 1), "application/pdf")
 
@@ -37,6 +39,7 @@ def test_upload_validation_rejects_oversized_file():
     UPLOAD_MAX_SIZE_MB=10,
     UPLOAD_STRICT_MIME_CHECK=False,
 )
+@pytest.mark.read_only
 @pytest.mark.parametrize(
     ("filename", "content_type"),
     [
@@ -56,6 +59,7 @@ def test_upload_validation_allows_common_safe_extensions(filename, content_type)
     UPLOAD_MAX_SIZE_MB=10,
     UPLOAD_STRICT_MIME_CHECK=False,
 )
+@pytest.mark.read_only
 def test_upload_validation_cleans_filename():
     result = validate_uploaded_file(make_upload('../bad name:photo.jpg', content_type="image/jpeg"))
 
@@ -69,6 +73,7 @@ def test_upload_validation_cleans_filename():
     UPLOAD_MAX_SIZE_MB=10,
     UPLOAD_STRICT_MIME_CHECK=True,
 )
+@pytest.mark.read_only
 def test_upload_validation_can_reject_mime_mismatch_when_strict():
     with pytest.raises(UploadValidationError):
         validate_uploaded_file(make_upload("photo.jpg", b"not really an image", "application/pdf"))
