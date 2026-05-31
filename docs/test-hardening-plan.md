@@ -26,7 +26,9 @@ The CSRF wrapper only adds a one-off `ENABLE_CSRF_PROTECTION=True` override. It 
 
 `tests/conftest.py` intentionally unblocks access to the already-restored local Docker Compose database. These checks therefore run against shared restored state, not a pytest-managed disposable test database.
 
-The current mutating tests also use fixed usernames, fixed group names, fixed audit tickets, and name-based cleanup. If smoke and CSRF wrappers run at the same time against the same Compose project, both pytest processes can create, delete, or count the same rows. The highest-risk area is API scope apply/rollback coverage in `tests/security/test_api_scope_storage.py`.
+Previously observed mutating tests used fixed usernames, fixed group names, fixed audit tickets, name-based cleanup, and global count assertions. The highest-risk area was API scope apply/rollback coverage in `tests/security/test_api_scope_storage.py`; that module has since been refactored to use per-test namespace cleanup and namespace-scoped or target-specific assertions.
+
+The serial policy still applies because smoke and CSRF wrappers run the same broad suite against one restored Compose database. If both wrappers run at the same time, unrelated mutating tests or canonical-row changes can still contend even though API scope storage no longer uses fixed disposable names.
 
 Until database ownership and fixture namespaces are isolated, the required policy is:
 
@@ -69,10 +71,10 @@ Current classification status:
 
 | Marker | Current use | Execution policy |
 | --- | --- | --- |
-| `read_only` | Registered for tests that inspect state without durable writes. Broader classification remains pending. | Advisory local selection only; review marker accuracy before using it to change wrapper behavior. |
+| `read_only` | Registered and now applied to smoke/security tests that inspect state or validate static behavior without durable writes. Coverage has expanded beyond the initial P7 API scope storage classification, but still needs review before driving wrapper behavior. | Advisory local selection only; review marker accuracy before using it to change wrapper behavior. |
 | `mutating` | Applied to `tests/security/test_api_scope_storage.py` at module level. | Serial only. Do not run mutating selections concurrently against the shared restored Compose DB. |
-| `csrf` | Registered for CSRF-mode tests. Broader classification remains pending. | Serial only when run through the CSRF wrapper. |
-| `api_scope` | Applied to `tests/security/test_api_scope_storage.py` at module level. | Serial when combined with `mutating`; do not parallelize until DB isolation exists. |
+| `csrf` | Registered and applied to CSRF behavior tests at function level where CSRF-enabled behavior is required or verified. | Serial only when run through the CSRF wrapper. |
+| `api_scope` | Applied to `tests/security/test_api_scope_storage.py` at module level and to read-only API permission/log/feature-flag coverage where appropriate. | Serial when combined with `mutating`; do not parallelize until DB isolation exists. |
 
 Recommended marker rules remain:
 
@@ -101,7 +103,7 @@ These commands are documentation and local triage aids. They do not replace the 
 
 ## 4. Unique Namespace Fixture Plan
 
-Fixed fixture names should be replaced by a generated namespace owned by the current test run.
+Fixed fixture names should be replaced by a generated namespace owned by the current test run. This has been completed for `tests/security/test_api_scope_storage.py`; the pattern remains the standard for any additional mutating tests.
 
 Recommended namespace format:
 
@@ -203,13 +205,13 @@ Smoke and CSRF wrappers can remain full serial wrappers while a separate read-on
 
 ### Phase 3: Unique Fixture Namespaces
 
-Refactor mutating fixtures and generated CSV rows to use unique namespaces. Remove dependency on fixed disposable usernames, groups, and audit tickets.
+Refactor mutating fixtures and generated CSV rows to use unique namespaces. Remove dependency on fixed disposable usernames, groups, and audit tickets. API scope storage has already completed this step; future work should apply the same rule to any newly identified mutating fixtures.
 
 Keep execution serial after this phase until scoped assertions are complete.
 
 ### Phase 4: Scoped Assertions
 
-Replace global count assertions with namespace-scoped or target-specific assertions.
+Replace global count assertions with namespace-scoped or target-specific assertions. API scope storage has already completed this step for its previously global count checks.
 
 Keep any truly global state assertions in an explicitly serial bucket.
 
@@ -324,3 +326,15 @@ Dry-run, missing-confirmation, validation-error, and report-only assertions now 
 The test semantics were preserved: these cases still prove that report-only, dry-run, rejected apply, rejected rollback, and invalid-plan paths do not write the data that the test owns. The assertions are now less sensitive to unrelated rows created by another process against the same shared database.
 
 Smoke and CSRF wrapper execution remains serial-only. No production application logic, permission system behavior, production workflow, `API_PERMISSION_MODE`, database isolation behavior, or parallel test execution setting was changed.
+
+## P9 Result: Marker Coverage Expansion
+
+Updated: 2026-05-31
+
+This phase expanded marker coverage beyond the initial P7 API scope storage classification. `pytest.ini` still registers `read_only`, `mutating`, `csrf`, and `api_scope`.
+
+Current marker coverage includes module-level `read_only` markers for smoke checks and selected security modules, function-level `read_only` markers for security matrix and validation checks, function/module-level `api_scope` markers for API permission scope review/log/feature-flag coverage, and function-level `csrf` markers for CSRF behavior checks. `tests/security/test_api_scope_storage.py` remains module-level `api_scope` and `mutating`.
+
+The marker expansion did not change wrapper execution. `.\scripts\run-smoke-tests.ps1` and `.\scripts\run-csrf-tests.ps1` still run broad suite targets rather than marker-selected subsets, and there was no parallel or xdist change.
+
+Repo-root hygiene is not fully clean yet: unexpected empty directories `pytest.ini;C` and `tests;C` remain present. Until they are handled separately, marker discovery and working-directory behavior should not be described as completely clean.

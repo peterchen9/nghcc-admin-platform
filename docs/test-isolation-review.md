@@ -42,11 +42,13 @@ That means these suites are integration checks against shared local state, not i
 
 ## Conflict Cause
 
-The conflict is caused by running two full pytest processes against the same restored Docker Compose database while both processes create, mutate, and delete the same fixed fixture rows.
+The core conflict is caused by running two full pytest processes against the same restored Docker Compose database while both processes create, mutate, and delete rows in shared database state.
 
-The highest-risk file is `tests/security/test_api_scope_storage.py`. It uses fixed usernames, fixed group names, and fixed audit tickets, then deletes and recreates those rows in a fixture before and after each test. When `run-smoke-tests` and `run-csrf-tests` run in parallel, both processes operate on the same names in the same database.
+Historically, the highest-risk file was `tests/security/test_api_scope_storage.py` because it used fixed usernames, fixed group names, fixed audit tickets, and global count assertions. That module has since been refactored to use per-test namespace cleanup and namespace-scoped or target-specific count assertions. It no longer deletes durable `test_*` account matrix users as disposable mutation fixtures.
 
-Typical failure sequence:
+The remaining risk is broader than that one module: `run-smoke-tests` and `run-csrf-tests` still run the same broad suite against the same restored local database, and wrapper execution still has no marker selection, per-run database ownership, or xdist isolation.
+
+The historical fixed-name failure sequence was:
 
 1. Smoke process fixture deletes `api-apply-user`.
 2. CSRF process fixture also deletes `api-apply-user`.
@@ -56,9 +58,13 @@ Typical failure sequence:
 
 This is not a CSRF-specific application bug. It is shared test-state contention.
 
-## Duplicate Usernames
+## Namespace Status
 
-The suite contains deterministic usernames that are reused on every run:
+`tests/security/test_api_scope_storage.py` now generates disposable usernames, groups, and audit tickets from a per-test namespace. Setup and teardown cleanup filter by namespace prefixes for users, groups, and audit tickets instead of deleting canonical or durable local account names.
+
+The module also replaced the earlier global count checks with namespace-scoped or target-specific assertions for report-only, dry-run, rejected apply, rejected rollback, and invalid-plan paths.
+
+The following deterministic names are now historical examples of the pre-namespace API scope storage fixture pattern rather than the current disposable row ownership model:
 
 - `api-scope-user`
 - `api-effective-user`
@@ -75,28 +81,25 @@ The suite contains deterministic usernames that are reused on every run:
 - `api-rollback-user`
 - `api-rollback-service`
 - `api-rollback-tx-user`
-- `test_user`
-- `test_staff_nomenu`
 - `csrf-check-only`
 - `no-write`
 
-Some names are only used in requests expected to fail, but the API scope storage tests create actual Django `User` rows with fixed names. Because `auth_user.username` is unique, parallel processes can collide directly on insert.
+Some non-API-scope tests may still use deterministic request payload names such as `csrf-check-only` or `no-write`, usually in paths expected not to write rows. Those should still be reviewed before treating the whole suite as parallel-safe.
 
-The test account matrix also reserves `test_*` users for local smoke and permission checks. Reusing those names inside write/apply/rollback tests raises the risk because cleanup can remove durable local test accounts expected by other tests.
+The test account matrix reserves durable `test_*` users for local smoke and permission checks. API scope storage tests no longer reuse those durable names directly; when they need analogous values, the generated namespace is prepended.
 
 ## Fixture Cleanup
 
-`api_scope_storage_cleanup` deletes shared usernames, groups, and audit tickets both before and after each test. This makes single-process reruns repeatable, but it is unsafe across concurrent pytest processes sharing the same database.
+`api_scope_storage_cleanup` now deletes usernames, groups, and audit tickets owned by the current test namespace before and after each test. This makes the module safer for serial reruns and less sensitive to unrelated local data than the earlier fixed-name cleanup.
 
-Risk patterns:
+Residual risk patterns:
 
-- Setup cleanup from one process can delete rows just created by the other process.
-- Teardown cleanup from one process can delete rows still needed by the other process.
-- Cleanup is name-based, not ownership-based.
-- Cleanup includes `test_user` and `test_staff_nomenu`, which overlap with the managed local account matrix.
-- Cleanup resets canonical `ApiScope.active=True`, while tests can temporarily set a canonical scope inactive.
+- The wrapper scripts still run broad target sets against one restored DB.
+- Other mutating tests may still share restored state unless they are classified and reviewed.
+- Cleanup is namespace-based inside API scope storage, but it is not a replacement for per-worker DB ownership.
+- Tests can still temporarily mutate canonical rows such as `ApiScope.active`, which remains unsafe under shared parallel execution.
 
-The fixture is useful for serial execution, but it is not a parallel isolation boundary.
+The fixture is useful for serial execution and targeted cleanup, but it is not a full parallel isolation boundary.
 
 ## Transaction Scope
 
@@ -106,8 +109,8 @@ It does not isolate the surrounding pytest process from another pytest process b
 
 - The suite bypasses pytest-django's normal test database lifecycle.
 - Tests write to the shared restored database directly.
-- Several assertions compare global counts such as `UserApiScopeGrant.objects.count()`, `GroupApiScopeGrant.objects.count()`, `ApiScopeGrantAudit.objects.count()`, and group membership counts.
-- Global count assertions can change if another process writes unrelated rows at the same time.
+- API scope storage assertions now use namespace-scoped or target-specific counts for the previously global grant/audit checks.
+- Any remaining global count assertions elsewhere can change if another process writes unrelated rows at the same time.
 - Cleanup is performed outside a per-test transaction that would be rolled back by pytest.
 
 The command-level transactions are valid application safeguards, but they do not make the test suite parallel-safe.
@@ -118,7 +121,9 @@ The current design explicitly reuses the Docker Compose `db` service database (`
 
 This is appropriate for staging-like smoke checks that validate restored DB/media health, but it is not appropriate for concurrent mutation tests unless each concurrent run gets its own database, schema, or Compose project.
 
-`pytest.ini` also has no xdist configuration, no per-worker database suffixing, and no marker split between read-only smoke checks and database-mutating security tests.
+`pytest.ini` has no xdist configuration and no per-worker database suffixing. It does register `read_only`, `mutating`, `csrf`, and `api_scope`, and marker coverage has expanded beyond the initial P7 API scope storage module. However, the smoke and CSRF wrappers still do not select by marker, so marker coverage does not yet provide execution isolation.
+
+The repo root also currently contains unexpected empty directories named `pytest.ini;C` and `tests;C`. Until those are removed in a separate cleanup, marker discovery and working-directory behavior should not be described as completely clean.
 
 ## Pytest Parallel Safety
 
@@ -133,9 +138,9 @@ Safe or lower-risk areas:
 
 Unsafe areas:
 
-- Tests that create fixed users or groups.
+- Tests that create users or groups in shared restored DB state without reviewed namespace ownership.
 - Tests that apply or rollback reviewed API scope plans with `--apply --confirm-*`.
-- Tests that assert global database counts.
+- Tests that assert global database counts outside an isolated DB.
 - Tests that mutate canonical `ApiScope.active`.
 - Tests depending on durable local `test_*` accounts while another test can delete or recreate those accounts.
 
@@ -156,7 +161,7 @@ Use one of these strategies locally:
 
 3. Split read-only and mutating tests.
    - Allow read-only smoke/integration/static security tests to run in parallel.
-   - Run database-mutating tests serially until they use unique per-run fixture names and isolated databases.
+   - Run database-mutating tests serially until they use unique fixture namespaces and isolated databases.
 
 Recommended immediate local policy: serial wrapper execution.
 
@@ -205,9 +210,9 @@ Next test-only hardening:
 
 1. Split mutating tests from restored-DB smoke tests.
 2. Stop using durable `test_*` account names inside disposable apply/rollback tests.
-3. Generate per-test or per-run usernames/groups/tickets for API scope storage tests.
-4. Replace global count assertions with scoped assertions.
-5. Add markers for read-only versus mutating tests.
+3. Continue reviewing namespace ownership for mutating tests beyond API scope storage.
+4. Continue replacing any remaining global count assertions with scoped assertions.
+5. Continue expanding and auditing markers for read-only versus mutating tests.
 
 Future parallelization:
 
@@ -223,4 +228,4 @@ Future CI impact: high if smoke and CSRF are added as parallel jobs sharing the 
 
 ## Conclusion
 
-The data conflict comes from shared database reuse plus fixed-name mutating fixtures. The safest immediate correction is execution policy: run `run-smoke-tests` and `run-csrf-tests` serially unless each run owns a separate database. Longer term, isolate mutating tests with unique fixture namespaces and per-worker databases before enabling pytest parallelism.
+The data conflict comes from shared database reuse plus mutating fixtures that do not yet have process-level database ownership. API scope storage has already moved from fixed disposable names and global counts to namespace cleanup and scoped assertions, but the safest immediate execution policy remains unchanged: run `run-smoke-tests` and `run-csrf-tests` serially unless each run owns a separate database. Longer term, keep mutating tests on unique fixture namespaces and per-worker databases before enabling pytest parallelism.
