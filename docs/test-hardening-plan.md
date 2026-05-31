@@ -312,3 +312,15 @@ Execution policy remains conservative:
 - Do not enable `API_PERMISSION_MODE=enforce`.
 - Do not change DB isolation.
 - Treat marker selections as local review aids until marker coverage and isolation prerequisites are complete.
+
+## P7 Phase 4 Result: Scoped API Scope Storage Assertions
+
+Updated: 2026-05-31
+
+This phase replaced the remaining `TODO(P7 Phase 4)` global count assertions in `tests/security/test_api_scope_storage.py` with namespace-scoped or target-specific assertions.
+
+Dry-run, missing-confirmation, validation-error, and report-only assertions now compare only rows owned by the current test namespace: usernames under the generated user prefix, groups under the generated group prefix, and audit rows under the generated ticket prefix. Existing target user group-membership assertions remain target-specific.
+
+The test semantics were preserved: these cases still prove that report-only, dry-run, rejected apply, rejected rollback, and invalid-plan paths do not write the data that the test owns. The assertions are now less sensitive to unrelated rows created by another process against the same shared database.
+
+Smoke and CSRF wrapper execution remains serial-only. No production application logic, permission system behavior, production workflow, `API_PERMISSION_MODE`, database isolation behavior, or parallel test execution setting was changed.

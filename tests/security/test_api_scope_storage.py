@@ -89,6 +89,33 @@ def api_scopes(api_scope_storage_cleanup):
     }
 
 
+def _namespace_grant_counts(namespace):
+    return (
+        UserApiScopeGrant.objects.filter(
+            user__username__startswith=namespace.user_prefix
+        ).count(),
+        GroupApiScopeGrant.objects.filter(
+            group__name__startswith=namespace.group_prefix
+        ).count(),
+    )
+
+
+def _namespace_grant_audit_counts(namespace):
+    return (
+        *_namespace_grant_counts(namespace),
+        ApiScopeGrantAudit.objects.filter(
+            ticket__startswith=namespace.ticket_prefix
+        ).count(),
+    )
+
+
+def _namespace_storage_counts(namespace):
+    return (
+        Group.objects.filter(name__startswith=namespace.group_prefix).count(),
+        *_namespace_grant_audit_counts(namespace),
+    )
+
+
 def test_canonical_api_scopes_are_seeded(api_scopes):
     assert set(api_scopes) == {
         'api:hymns:read',
@@ -262,11 +289,7 @@ def test_plan_api_scope_grants_command_is_report_only(
         encoding='utf-8',
     )
     output = io.StringIO()
-    # TODO(P7 Phase 4): replace global grant counts with namespace-scoped assertions.
-    counts_before = (
-        UserApiScopeGrant.objects.count(),
-        GroupApiScopeGrant.objects.count(),
-    )
+    counts_before = _namespace_grant_counts(api_scope_test_namespace)
 
     call_command(
         'plan_api_scope_grants',
@@ -275,10 +298,7 @@ def test_plan_api_scope_grants_command_is_report_only(
         stdout=output,
     )
 
-    assert counts_before == (
-        UserApiScopeGrant.objects.count(),
-        GroupApiScopeGrant.objects.count(),
-    )
+    assert counts_before == _namespace_grant_counts(api_scope_test_namespace)
     rows = list(csv.DictReader(io.StringIO(output.getvalue())))
     assert {
         'plan_type': 'user_review',
@@ -355,12 +375,8 @@ def test_apply_api_scope_reviewed_plan_dry_run_writes_nothing(
         encoding='utf-8',
     )
     output = io.StringIO()
-    # TODO(P7 Phase 4): replace global object counts with namespace-scoped assertions.
     counts_before = (
-        Group.objects.count(),
-        UserApiScopeGrant.objects.count(),
-        GroupApiScopeGrant.objects.count(),
-        ApiScopeGrantAudit.objects.count(),
+        *_namespace_storage_counts(api_scope_test_namespace),
         user.groups.count(),
         service_user.groups.count(),
     )
@@ -373,10 +389,7 @@ def test_apply_api_scope_reviewed_plan_dry_run_writes_nothing(
     )
 
     assert counts_before == (
-        Group.objects.count(),
-        UserApiScopeGrant.objects.count(),
-        GroupApiScopeGrant.objects.count(),
-        ApiScopeGrantAudit.objects.count(),
+        *_namespace_storage_counts(api_scope_test_namespace),
         user.groups.count(),
         service_user.groups.count(),
     )
@@ -421,11 +434,8 @@ def test_apply_api_scope_reviewed_plan_apply_without_confirm_writes_nothing(
         ),
         encoding='utf-8',
     )
-    # TODO(P7 Phase 4): replace global grant/audit counts with scoped assertions.
     counts_before = (
-        UserApiScopeGrant.objects.count(),
-        GroupApiScopeGrant.objects.count(),
-        ApiScopeGrantAudit.objects.count(),
+        *_namespace_grant_audit_counts(api_scope_test_namespace),
         user.groups.count(),
     )
 
@@ -438,9 +448,7 @@ def test_apply_api_scope_reviewed_plan_apply_without_confirm_writes_nothing(
         )
 
     assert counts_before == (
-        UserApiScopeGrant.objects.count(),
-        GroupApiScopeGrant.objects.count(),
-        ApiScopeGrantAudit.objects.count(),
+        *_namespace_grant_audit_counts(api_scope_test_namespace),
         user.groups.count(),
     )
     assert user.groups.filter(name=group.name).exists() is False
@@ -605,12 +613,7 @@ def test_apply_api_scope_reviewed_plan_validation_blocks_bad_plan(
         ),
         encoding='utf-8',
     )
-    # TODO(P7 Phase 4): replace global grant/audit counts with scoped assertions.
-    counts_before = (
-        UserApiScopeGrant.objects.count(),
-        GroupApiScopeGrant.objects.count(),
-        ApiScopeGrantAudit.objects.count(),
-    )
+    counts_before = _namespace_grant_audit_counts(api_scope_test_namespace)
 
     with pytest.raises(CommandError, match='reviewed plan validation failed'):
         call_command(
@@ -619,11 +622,7 @@ def test_apply_api_scope_reviewed_plan_validation_blocks_bad_plan(
             str(plan_csv),
         )
 
-    assert counts_before == (
-        UserApiScopeGrant.objects.count(),
-        GroupApiScopeGrant.objects.count(),
-        ApiScopeGrantAudit.objects.count(),
-    )
+    assert counts_before == _namespace_grant_audit_counts(api_scope_test_namespace)
 
 
 def _write_rollback_plan(path, rows):
@@ -679,11 +678,8 @@ def test_rollback_api_scope_reviewed_plan_dry_run_writes_nothing(
         ],
     )
     output = io.StringIO()
-    # TODO(P7 Phase 4): replace global grant/audit counts with scoped assertions.
     counts_before = (
-        UserApiScopeGrant.objects.count(),
-        GroupApiScopeGrant.objects.count(),
-        ApiScopeGrantAudit.objects.count(),
+        *_namespace_grant_audit_counts(api_scope_test_namespace),
         user.groups.count(),
     )
 
@@ -695,9 +691,7 @@ def test_rollback_api_scope_reviewed_plan_dry_run_writes_nothing(
     )
 
     assert counts_before == (
-        UserApiScopeGrant.objects.count(),
-        GroupApiScopeGrant.objects.count(),
-        ApiScopeGrantAudit.objects.count(),
+        *_namespace_grant_audit_counts(api_scope_test_namespace),
         user.groups.count(),
     )
     rows = list(csv.DictReader(io.StringIO(output.getvalue())))
@@ -726,8 +720,12 @@ def test_rollback_api_scope_reviewed_plan_apply_without_confirm_writes_nothing(
             ),
         ],
     )
-    # TODO(P7 Phase 4): replace global audit count with scoped assertions.
-    counts_before = (ApiScopeGrantAudit.objects.count(), user.groups.count())
+    counts_before = (
+        ApiScopeGrantAudit.objects.filter(
+            ticket__startswith=api_scope_test_namespace.ticket_prefix
+        ).count(),
+        user.groups.count(),
+    )
 
     with pytest.raises(CommandError, match='--apply requires --confirm-rollback'):
         call_command(
@@ -737,7 +735,12 @@ def test_rollback_api_scope_reviewed_plan_apply_without_confirm_writes_nothing(
             '--apply',
         )
 
-    assert counts_before == (ApiScopeGrantAudit.objects.count(), user.groups.count())
+    assert counts_before == (
+        ApiScopeGrantAudit.objects.filter(
+            ticket__startswith=api_scope_test_namespace.ticket_prefix
+        ).count(),
+        user.groups.count(),
+    )
     assert user.groups.filter(name=group.name).exists() is True
 
 
