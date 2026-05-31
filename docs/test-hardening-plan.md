@@ -53,9 +53,9 @@ Proposed buckets:
 
 The split should be declarative first: add markers and selection commands, then verify that the selected sets match actual behavior. Wrapper changes should come only after the marker audit is complete.
 
-## 3. Pytest Marker Plan
+## 3. Current Pytest Marker Usage
 
-Suggested markers for a future `pytest.ini` update:
+The current `pytest.ini` registers these markers:
 
 ```ini
 markers =
@@ -65,7 +65,16 @@ markers =
     api_scope: test covers API permission scope storage, planning, apply, rollback, audit, or effective-scope logic
 ```
 
-Recommended marker rules:
+Current classification status:
+
+| Marker | Current use | Execution policy |
+| --- | --- | --- |
+| `read_only` | Registered for tests that inspect state without durable writes. Broader classification remains pending. | Advisory local selection only; review marker accuracy before using it to change wrapper behavior. |
+| `mutating` | Applied to `tests/security/test_api_scope_storage.py` at module level. | Serial only. Do not run mutating selections concurrently against the shared restored Compose DB. |
+| `csrf` | Registered for CSRF-mode tests. Broader classification remains pending. | Serial only when run through the CSRF wrapper. |
+| `api_scope` | Applied to `tests/security/test_api_scope_storage.py` at module level. | Serial when combined with `mutating`; do not parallelize until DB isolation exists. |
+
+Recommended marker rules remain:
 
 - Every test that touches the database should have either `read_only` or `mutating`.
 - Any test that calls confirmed apply/rollback paths must be `mutating` and `api_scope`.
@@ -73,16 +82,22 @@ Recommended marker rules:
 - Dry-run command tests may be `read_only` only after assertions prove scoped row counts are unchanged.
 - Marker selection should fail closed during review: unmarked DB tests stay in the serial full suite until classified.
 
-Future command shape:
+Local marker inspection:
 
 ```text
-pytest -m "read_only and not csrf"
-pytest -m "csrf and read_only"
+pytest --markers
+```
+
+Recommended local marker-selected commands:
+
+```text
+pytest -m read_only
 pytest -m "mutating"
+pytest -m api_scope
 pytest -m "api_scope and mutating"
 ```
 
-This phase does not add the markers; it only defines the target taxonomy.
+These commands are documentation and local triage aids. They do not replace the existing smoke or CSRF wrapper scripts, and they do not imply parallel execution is supported.
 
 ## 4. Unique Namespace Fixture Plan
 
@@ -268,3 +283,32 @@ Setup and teardown cleanup now deletes only rows whose usernames, group names, o
 Existing test semantics and assertion purposes were preserved. Existing global count assertions were left in place and marked with `TODO(P7 Phase 4)` for a later scoped-assertion pass.
 
 Smoke and CSRF wrapper execution remains serial-only. No production application logic, permission system behavior, production workflow, `API_PERMISSION_MODE`, database isolation behavior, or parallel test execution setting was changed.
+
+## P7 Phase 3 Result: Marker Runbook and Serial Policy
+
+Updated: 2026-05-31
+
+This phase documents the current marker usage and recommended local marker-selected commands without changing tests, application logic, permission behavior, workflow files, database isolation, or CI jobs.
+
+Recommended local commands:
+
+```text
+pytest --markers
+pytest -m read_only
+pytest -m mutating
+pytest -m api_scope
+pytest -m "api_scope and mutating"
+pytest tests/security/test_api_scope_storage.py
+.\scripts\run-smoke-tests.ps1
+.\scripts\run-csrf-tests.ps1
+```
+
+Execution policy remains conservative:
+
+- Run smoke and CSRF wrappers with serial execution only.
+- Do not run `.\scripts\run-smoke-tests.ps1` and `.\scripts\run-csrf-tests.ps1` at the same time against the same restored local DB.
+- Do not enable `pytest-xdist`.
+- Do not add parallel CI jobs.
+- Do not enable `API_PERMISSION_MODE=enforce`.
+- Do not change DB isolation.
+- Treat marker selections as local review aids until marker coverage and isolation prerequisites are complete.
