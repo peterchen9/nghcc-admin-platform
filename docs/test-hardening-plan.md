@@ -256,3 +256,15 @@ This phase registered the pytest markers `read_only`, `mutating`, `csrf`, and `a
 Initial test classification was intentionally limited to `tests/security/test_api_scope_storage.py`. The module is marked `api_scope` and `mutating` because its tests use cleanup that deletes test-owned users, groups, and audit rows, and the cases create or modify users, groups, grants, scope active state, memberships, or audit rows. No tests in this module were marked `read_only` in this phase.
 
 Smoke and CSRF wrapper execution remains serial-only. No wrapper, workflow, fixture behavior, database isolation behavior, production permission behavior, or test assertion was changed.
+
+## P7 Phase 2 Result: API Scope Storage Test Namespace
+
+Updated: 2026-05-31
+
+This phase refactored `tests/security/test_api_scope_storage.py` to use a unique per-test namespace for disposable usernames, groups, and audit tickets. The namespace uses a short random suffix so generated usernames remain compatible with the existing local `UserProfile.worker_ename` length constraint.
+
+Setup and teardown cleanup now deletes only rows whose usernames, group names, or audit tickets start with the current test namespace. Durable local accounts such as `test_user` and `test_staff_nomenu` are no longer used as disposable mutation fixtures in this module.
+
+Existing test semantics and assertion purposes were preserved. Existing global count assertions were left in place and marked with `TODO(P7 Phase 4)` for a later scoped-assertion pass.
+
+Smoke and CSRF wrapper execution remains serial-only. No production application logic, permission system behavior, production workflow, `API_PERMISSION_MODE`, database isolation behavior, or parallel test execution setting was changed.

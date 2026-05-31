@@ -1,5 +1,6 @@
 import csv
 import io
+import uuid
 
 import pytest
 from django.contrib.auth.models import Group, User
@@ -30,52 +31,53 @@ pytestmark = [pytest.mark.api_scope, pytest.mark.mutating]
 
 
 @pytest.fixture
-def api_scope_storage_cleanup():
-    usernames = [
-        'api-scope-user',
-        'api-effective-user',
-        'api-missing-user',
-        'api-superuser',
-        'api-staff-user',
-        'api-report-user',
-        'api-plan-user',
-        'api-plan-staff',
-        'api-plan-superuser',
-        'api-apply-user',
-        'api-apply-service',
-        'api-apply-tx-user',
-        'api-rollback-user',
-        'api-rollback-service',
-        'api-rollback-tx-user',
-        'test_user',
-        'test_staff_nomenu',
-    ]
-    group_names = [
-        'api-scope-group',
-        'api-effective-group',
-        'api_hymns_readers',
-        'api_humnos_readers',
-        'api_apply_tx_group',
-        'api_rollback_readers',
-        'api_rollback_tx_group',
-        'test_api_scope_drill_readers',
-    ]
-    audit_tickets = [
-        'SEC-API-001',
-        'SEC-API-002',
-        'SEC-API-TX',
-        'SEC-API-RB',
-        'SEC-API-RB-TX',
-        'SEC-API-DRILL',
-        'SEC-API-DRILL-RB',
-    ]
-    ApiScopeGrantAudit.objects.filter(ticket__in=audit_tickets).delete()
-    User.objects.filter(username__in=usernames).delete()
-    Group.objects.filter(name__in=group_names).delete()
+def api_scope_test_namespace():
+    suffix = uuid.uuid4().hex[:8]
+    prefix = f't_{suffix}'
+    ticket_prefix = f'SEC-API-TEST-{suffix.upper()}'
+
+    class Namespace:
+        def user(self, name):
+            return f'{prefix}_{name}'
+
+        def group(self, name):
+            return f'{prefix}_{name}'
+
+        def ticket(self, name):
+            return f'{ticket_prefix}-{name}'
+
+        @property
+        def user_prefix(self):
+            return prefix
+
+        @property
+        def group_prefix(self):
+            return prefix
+
+        @property
+        def ticket_prefix(self):
+            return ticket_prefix
+
+    return Namespace()
+
+
+@pytest.fixture
+def api_scope_storage_cleanup(api_scope_test_namespace):
+    ApiScopeGrantAudit.objects.filter(
+        ticket__startswith=api_scope_test_namespace.ticket_prefix
+    ).delete()
+    User.objects.filter(
+        username__startswith=api_scope_test_namespace.user_prefix
+    ).delete()
+    Group.objects.filter(name__startswith=api_scope_test_namespace.group_prefix).delete()
     yield
-    ApiScopeGrantAudit.objects.filter(ticket__in=audit_tickets).delete()
-    User.objects.filter(username__in=usernames).delete()
-    Group.objects.filter(name__in=group_names).delete()
+    ApiScopeGrantAudit.objects.filter(
+        ticket__startswith=api_scope_test_namespace.ticket_prefix
+    ).delete()
+    User.objects.filter(
+        username__startswith=api_scope_test_namespace.user_prefix
+    ).delete()
+    Group.objects.filter(name__startswith=api_scope_test_namespace.group_prefix).delete()
     ApiScope.objects.filter(scope__in=CANONICAL_API_SCOPES).update(active=True)
 
 
@@ -98,9 +100,11 @@ def test_canonical_api_scopes_are_seeded(api_scopes):
     assert all(scope.active for scope in api_scopes.values())
 
 
-def test_api_scope_grants_are_unique(api_scopes):
-    user = User.objects.create_user(username='api-scope-user')
-    group = Group.objects.create(name='api-scope-group')
+def test_api_scope_grants_are_unique(api_scopes, api_scope_test_namespace):
+    username = api_scope_test_namespace.user('api-scope-user')
+    group_name = api_scope_test_namespace.group('api-scope-group')
+    user = User.objects.create_user(username=username)
+    group = Group.objects.create(name=group_name)
     scope = api_scopes['api:hymns:read']
 
     UserApiScopeGrant.objects.create(user=user, scope=scope)
@@ -113,9 +117,13 @@ def test_api_scope_grants_are_unique(api_scopes):
         GroupApiScopeGrant.objects.create(group=group, scope=scope)
 
 
-def test_effective_scopes_merge_enabled_group_and_user_grants(api_scopes):
-    user = User.objects.create_user(username='api-effective-user')
-    group = Group.objects.create(name='api-effective-group')
+def test_effective_scopes_merge_enabled_group_and_user_grants(
+    api_scopes, api_scope_test_namespace
+):
+    username = api_scope_test_namespace.user('api-effective-user')
+    group_name = api_scope_test_namespace.group('api-effective-group')
+    user = User.objects.create_user(username=username)
+    group = Group.objects.create(name=group_name)
     user.groups.add(group)
 
     UserApiScopeGrant.objects.create(
@@ -144,8 +152,10 @@ def test_effective_scopes_merge_enabled_group_and_user_grants(api_scopes):
     assert decision.reason == 'effective_scope'
 
 
-def test_effective_scope_missing_scope_decision(api_scopes):
-    user = User.objects.create_user(username='api-missing-user')
+def test_effective_scope_missing_scope_decision(api_scopes, api_scope_test_namespace):
+    user = User.objects.create_user(
+        username=api_scope_test_namespace.user('api-missing-user')
+    )
 
     decision = get_effective_api_scope_decision(user, 'api:hymns:read')
 
@@ -154,9 +164,11 @@ def test_effective_scope_missing_scope_decision(api_scopes):
     assert decision.effective_scopes == frozenset()
 
 
-def test_superuser_bypass_is_audited_without_grants(api_scopes):
+def test_superuser_bypass_is_audited_without_grants(
+    api_scopes, api_scope_test_namespace
+):
     user = User.objects.create_superuser(
-        username='api-superuser',
+        username=api_scope_test_namespace.user('api-superuser'),
         email='superuser@example.test',
         password='password',
     )
@@ -169,8 +181,11 @@ def test_superuser_bypass_is_audited_without_grants(api_scopes):
     assert get_effective_api_scopes(user) == frozenset()
 
 
-def test_staff_receives_no_default_api_scope(api_scopes):
-    user = User.objects.create_user(username='api-staff-user', is_staff=True)
+def test_staff_receives_no_default_api_scope(api_scopes, api_scope_test_namespace):
+    user = User.objects.create_user(
+        username=api_scope_test_namespace.user('api-staff-user'),
+        is_staff=True,
+    )
 
     decision = get_effective_api_scope_decision(user, 'api:hymns:read')
 
@@ -179,8 +194,11 @@ def test_staff_receives_no_default_api_scope(api_scopes):
     assert decision.reason == 'missing_scope'
 
 
-def test_report_api_effective_scopes_command_is_report_only(api_scopes):
-    user = User.objects.create_user(username='api-report-user')
+def test_report_api_effective_scopes_command_is_report_only(
+    api_scopes, api_scope_test_namespace
+):
+    username = api_scope_test_namespace.user('api-report-user')
+    user = User.objects.create_user(username=username)
     UserApiScopeGrant.objects.create(
         user=user,
         scope=api_scopes['api:hymns:read'],
@@ -197,7 +215,7 @@ def test_report_api_effective_scopes_command_is_report_only(api_scopes):
     rows = list(csv.DictReader(io.StringIO(output.getvalue())))
     assert rows == [
         {
-            'username': 'api-report-user',
+            'username': username,
             'user_id': str(user.id),
             'is_active': 'True',
             'is_staff': 'False',
@@ -208,15 +226,21 @@ def test_report_api_effective_scopes_command_is_report_only(api_scopes):
     ]
 
 
-def test_plan_api_scope_grants_command_is_report_only(api_scopes, tmp_path):
-    user = User.objects.create_user(username='api-plan-user')
-    staff = User.objects.create_user(username='api-plan-staff', is_staff=True)
+def test_plan_api_scope_grants_command_is_report_only(
+    api_scopes, tmp_path, api_scope_test_namespace
+):
+    username = api_scope_test_namespace.user('api-plan-user')
+    staff_username = api_scope_test_namespace.user('api-plan-staff')
+    superuser_username = api_scope_test_namespace.user('api-plan-superuser')
+    group_name = api_scope_test_namespace.group('api_hymns_readers')
+    user = User.objects.create_user(username=username)
+    staff = User.objects.create_user(username=staff_username, is_staff=True)
     superuser = User.objects.create_superuser(
-        username='api-plan-superuser',
-        email='api-plan-superuser@example.test',
+        username=superuser_username,
+        email=f'{superuser_username}@example.test',
         password='password',
     )
-    group = Group.objects.create(name='api_hymns_readers')
+    group = Group.objects.create(name=group_name)
     staff.groups.add(group)
     GroupApiScopeGrant.objects.create(
         group=group,
@@ -238,6 +262,7 @@ def test_plan_api_scope_grants_command_is_report_only(api_scopes, tmp_path):
         encoding='utf-8',
     )
     output = io.StringIO()
+    # TODO(P7 Phase 4): replace global grant counts with namespace-scoped assertions.
     counts_before = (
         UserApiScopeGrant.objects.count(),
         GroupApiScopeGrant.objects.count(),
@@ -258,7 +283,7 @@ def test_plan_api_scope_grants_command_is_report_only(api_scopes, tmp_path):
     assert {
         'plan_type': 'user_review',
         'principal_type': 'user',
-        'principal': 'api-plan-user',
+        'principal': username,
         'scope': 'api:hymns:read',
         'action': 'review_need',
         'source': 'report_only_logs',
@@ -271,7 +296,7 @@ def test_plan_api_scope_grants_command_is_report_only(api_scopes, tmp_path):
     assert {
         'plan_type': 'user_review',
         'principal_type': 'user',
-        'principal': 'api-plan-staff',
+        'principal': staff_username,
         'scope': 'api:hymns:read',
         'action': 'covered_by_group',
         'source': 'report_only_logs',
@@ -290,9 +315,16 @@ def test_plan_api_scope_grants_command_is_report_only(api_scopes, tmp_path):
     } in rows
 
 
-def test_apply_api_scope_reviewed_plan_dry_run_writes_nothing(api_scopes, tmp_path):
-    user = User.objects.create_user(username='api-apply-user')
-    service_user = User.objects.create_user(username='api-apply-service')
+def test_apply_api_scope_reviewed_plan_dry_run_writes_nothing(
+    api_scopes, tmp_path, api_scope_test_namespace
+):
+    username = api_scope_test_namespace.user('api-apply-user')
+    service_username = api_scope_test_namespace.user('api-apply-service')
+    group_name = api_scope_test_namespace.group('api_humnos_readers')
+    ticket_1 = api_scope_test_namespace.ticket('001')
+    ticket_2 = api_scope_test_namespace.ticket('002')
+    user = User.objects.create_user(username=username)
+    service_user = User.objects.create_user(username=service_username)
     plan_csv = tmp_path / 'reviewed-api-scope-plan.csv'
     plan_csv.write_text(
         '\n'.join(
@@ -302,27 +334,28 @@ def test_apply_api_scope_reviewed_plan_dry_run_writes_nothing(api_scopes, tmp_pa
                     'ticket,rollback_of,notes'
                 ),
                 (
-                    'create_group,api_humnos_readers,,,1,Approved reader role,'
-                    'peter,2026-05-30,SEC-API-001,,'
+                    f'create_group,{group_name},,,1,Approved reader role,'
+                    f'peter,2026-05-30,{ticket_1},,'
                 ),
                 (
-                    'create_group_grant,api_humnos_readers,,api:humnos:read,'
-                    '1,Approved reader scope,peter,2026-05-30,SEC-API-001,,'
+                    f'create_group_grant,{group_name},,api:humnos:read,'
+                    f'1,Approved reader scope,peter,2026-05-30,{ticket_1},,'
                 ),
                 (
-                    'assign_user_to_group,api_humnos_readers,api-apply-user,,'
-                    '1,Observed read need,peter,2026-05-30,SEC-API-001,,'
+                    f'assign_user_to_group,{group_name},{username},,'
+                    f'1,Observed read need,peter,2026-05-30,{ticket_1},,'
                 ),
                 (
-                    'create_user_grant,,api-apply-service,api:humnos:read,'
+                    f'create_user_grant,,{service_username},api:humnos:read,'
                     '1,Temporary documented exception,peter,2026-05-30,'
-                    'SEC-API-002,,'
+                    f'{ticket_2},,'
                 ),
             ]
         ),
         encoding='utf-8',
     )
     output = io.StringIO()
+    # TODO(P7 Phase 4): replace global object counts with namespace-scoped assertions.
     counts_before = (
         Group.objects.count(),
         UserApiScopeGrant.objects.count(),
@@ -347,7 +380,7 @@ def test_apply_api_scope_reviewed_plan_dry_run_writes_nothing(api_scopes, tmp_pa
         user.groups.count(),
         service_user.groups.count(),
     )
-    assert Group.objects.filter(name='api_humnos_readers').exists() is False
+    assert Group.objects.filter(name=group_name).exists() is False
     rows = list(csv.DictReader(io.StringIO(output.getvalue())))
     assert len(rows) == 4
     assert {row['dry_run'] for row in rows} == {'true'}
@@ -365,10 +398,13 @@ def test_apply_api_scope_reviewed_plan_dry_run_writes_nothing(api_scopes, tmp_pa
 
 
 def test_apply_api_scope_reviewed_plan_apply_without_confirm_writes_nothing(
-    api_scopes, tmp_path
+    api_scopes, tmp_path, api_scope_test_namespace
 ):
-    user = User.objects.create_user(username='api-apply-user')
-    group = Group.objects.create(name='api_humnos_readers')
+    username = api_scope_test_namespace.user('api-apply-user')
+    group_name = api_scope_test_namespace.group('api_humnos_readers')
+    ticket = api_scope_test_namespace.ticket('001')
+    user = User.objects.create_user(username=username)
+    group = Group.objects.create(name=group_name)
     plan_csv = tmp_path / 'reviewed-api-scope-plan.csv'
     plan_csv.write_text(
         '\n'.join(
@@ -378,13 +414,14 @@ def test_apply_api_scope_reviewed_plan_apply_without_confirm_writes_nothing(
                     'ticket,rollback_of,notes'
                 ),
                 (
-                    'assign_user_to_group,api_humnos_readers,api-apply-user,,'
-                    '1,Observed read need,peter,2026-05-30,SEC-API-001,,'
+                    f'assign_user_to_group,{group_name},{username},,'
+                    f'1,Observed read need,peter,2026-05-30,{ticket},,'
                 ),
             ]
         ),
         encoding='utf-8',
     )
+    # TODO(P7 Phase 4): replace global grant/audit counts with scoped assertions.
     counts_before = (
         UserApiScopeGrant.objects.count(),
         GroupApiScopeGrant.objects.count(),
@@ -410,10 +447,15 @@ def test_apply_api_scope_reviewed_plan_apply_without_confirm_writes_nothing(
 
 
 def test_apply_api_scope_reviewed_plan_apply_with_confirm_writes_audit_and_grants(
-    api_scopes, tmp_path
+    api_scopes, tmp_path, api_scope_test_namespace
 ):
-    user = User.objects.create_user(username='api-apply-user')
-    service_user = User.objects.create_user(username='api-apply-service')
+    username = api_scope_test_namespace.user('api-apply-user')
+    service_username = api_scope_test_namespace.user('api-apply-service')
+    group_name = api_scope_test_namespace.group('api_humnos_readers')
+    ticket_1 = api_scope_test_namespace.ticket('001')
+    ticket_2 = api_scope_test_namespace.ticket('002')
+    user = User.objects.create_user(username=username)
+    service_user = User.objects.create_user(username=service_username)
     plan_csv = tmp_path / 'reviewed-api-scope-plan.csv'
     plan_csv.write_text(
         '\n'.join(
@@ -423,21 +465,21 @@ def test_apply_api_scope_reviewed_plan_apply_with_confirm_writes_audit_and_grant
                     'ticket,rollback_of,notes'
                 ),
                 (
-                    'create_group,api_humnos_readers,,,1,Approved reader role,'
-                    'peter,2026-05-30,SEC-API-001,,'
+                    f'create_group,{group_name},,,1,Approved reader role,'
+                    f'peter,2026-05-30,{ticket_1},,'
                 ),
                 (
-                    'create_group_grant,api_humnos_readers,,api:humnos:read,'
-                    '1,Approved reader scope,peter,2026-05-30,SEC-API-001,,'
+                    f'create_group_grant,{group_name},,api:humnos:read,'
+                    f'1,Approved reader scope,peter,2026-05-30,{ticket_1},,'
                 ),
                 (
-                    'assign_user_to_group,api_humnos_readers,api-apply-user,,'
-                    '1,Observed read need,peter,2026-05-30,SEC-API-001,,'
+                    f'assign_user_to_group,{group_name},{username},,'
+                    f'1,Observed read need,peter,2026-05-30,{ticket_1},,'
                 ),
                 (
-                    'create_user_grant,,api-apply-service,api:humnos:read,'
+                    f'create_user_grant,,{service_username},api:humnos:read,'
                     '1,Temporary documented exception,peter,2026-05-30,'
-                    'SEC-API-002,,'
+                    f'{ticket_2},,'
                 ),
             ]
         ),
@@ -454,8 +496,8 @@ def test_apply_api_scope_reviewed_plan_apply_with_confirm_writes_audit_and_grant
         stdout=output,
     )
 
-    group = Group.objects.get(name='api_humnos_readers')
-    assert user.groups.filter(name='api_humnos_readers').exists() is True
+    group = Group.objects.get(name=group_name)
+    assert user.groups.filter(name=group_name).exists() is True
     assert GroupApiScopeGrant.objects.filter(
         group=group,
         scope=api_scopes['api:humnos:read'],
@@ -473,7 +515,7 @@ def test_apply_api_scope_reviewed_plan_apply_with_confirm_writes_audit_and_grant
     assert {row['status'] for row in rows} == {'applied'}
 
     audit_rows = ApiScopeGrantAudit.objects.filter(
-        ticket__in=['SEC-API-001', 'SEC-API-002']
+        ticket__in=[ticket_1, ticket_2]
     ).order_by('row_number')
     assert audit_rows.count() == 4
     assert {audit.status for audit in audit_rows} == {'applied'}
@@ -490,9 +532,12 @@ def test_apply_api_scope_reviewed_plan_apply_with_confirm_writes_audit_and_grant
 
 
 def test_apply_api_scope_reviewed_plan_transaction_failure_rolls_back(
-    api_scopes, tmp_path, monkeypatch
+    api_scopes, tmp_path, monkeypatch, api_scope_test_namespace
 ):
-    user = User.objects.create_user(username='api-apply-tx-user')
+    username = api_scope_test_namespace.user('api-apply-tx-user')
+    group_name = api_scope_test_namespace.group('api_apply_tx_group')
+    ticket = api_scope_test_namespace.ticket('TX')
+    user = User.objects.create_user(username=username)
     plan_csv = tmp_path / 'reviewed-api-scope-plan.csv'
     plan_csv.write_text(
         '\n'.join(
@@ -502,12 +547,12 @@ def test_apply_api_scope_reviewed_plan_transaction_failure_rolls_back(
                     'ticket,rollback_of,notes'
                 ),
                 (
-                    'create_group,api_apply_tx_group,,,1,Approved tx role,'
-                    'peter,2026-05-30,SEC-API-TX,,'
+                    f'create_group,{group_name},,,1,Approved tx role,'
+                    f'peter,2026-05-30,{ticket},,'
                 ),
                 (
-                    'assign_user_to_group,api_apply_tx_group,api-apply-tx-user,,'
-                    '1,Observed tx need,peter,2026-05-30,SEC-API-TX,,'
+                    f'assign_user_to_group,{group_name},{username},,'
+                    f'1,Observed tx need,peter,2026-05-30,{ticket},,'
                 ),
             ]
         ),
@@ -535,12 +580,15 @@ def test_apply_api_scope_reviewed_plan_transaction_failure_rolls_back(
             '--confirm-apply',
         )
 
-    assert Group.objects.filter(name='api_apply_tx_group').exists() is False
-    assert user.groups.filter(name='api_apply_tx_group').exists() is False
-    assert ApiScopeGrantAudit.objects.filter(ticket='SEC-API-TX').exists() is False
+    assert Group.objects.filter(name=group_name).exists() is False
+    assert user.groups.filter(name=group_name).exists() is False
+    assert ApiScopeGrantAudit.objects.filter(ticket=ticket).exists() is False
 
 
-def test_apply_api_scope_reviewed_plan_validation_blocks_bad_plan(api_scopes, tmp_path):
+def test_apply_api_scope_reviewed_plan_validation_blocks_bad_plan(
+    api_scopes, tmp_path, api_scope_test_namespace
+):
+    group_name = api_scope_test_namespace.group('api_humnos_readers')
     plan_csv = tmp_path / 'bad-reviewed-api-scope-plan.csv'
     plan_csv.write_text(
         '\n'.join(
@@ -550,13 +598,14 @@ def test_apply_api_scope_reviewed_plan_validation_blocks_bad_plan(api_scopes, tm
                     'ticket,rollback_of,notes'
                 ),
                 (
-                    'rollback_group_grant,api_humnos_readers,,api:humnos:read,'
+                    f'rollback_group_grant,{group_name},,api:humnos:read,'
                     'not-a-number,,peter,2026-05-30,,,'
                 ),
             ]
         ),
         encoding='utf-8',
     )
+    # TODO(P7 Phase 4): replace global grant/audit counts with scoped assertions.
     counts_before = (
         UserApiScopeGrant.objects.count(),
         GroupApiScopeGrant.objects.count(),
@@ -593,11 +642,15 @@ def _write_rollback_plan(path, rows):
 
 
 def test_rollback_api_scope_reviewed_plan_dry_run_writes_nothing(
-    api_scopes, tmp_path
+    api_scopes, tmp_path, api_scope_test_namespace
 ):
-    user = User.objects.create_user(username='api-rollback-user')
-    service_user = User.objects.create_user(username='api-rollback-service')
-    group = Group.objects.create(name='api_rollback_readers')
+    username = api_scope_test_namespace.user('api-rollback-user')
+    service_username = api_scope_test_namespace.user('api-rollback-service')
+    group_name = api_scope_test_namespace.group('api_rollback_readers')
+    ticket = api_scope_test_namespace.ticket('RB')
+    user = User.objects.create_user(username=username)
+    service_user = User.objects.create_user(username=service_username)
+    group = Group.objects.create(name=group_name)
     user.groups.add(group)
     GroupApiScopeGrant.objects.create(
         group=group,
@@ -612,20 +665,21 @@ def test_rollback_api_scope_reviewed_plan_dry_run_writes_nothing(
         plan_csv,
         [
             (
-                'remove_user_from_group,api_rollback_readers,api-rollback-user,,'
-                'apply-row-3,Rollback membership,peter,2026-05-30,SEC-API-RB,'
+                f'remove_user_from_group,{group_name},{username},,'
+                f'apply-row-3,Rollback membership,peter,2026-05-30,{ticket},'
             ),
             (
-                'disable_group_grant,api_rollback_readers,,api:humnos:read,'
-                'apply-row-2,Rollback group grant,peter,2026-05-30,SEC-API-RB,'
+                f'disable_group_grant,{group_name},,api:humnos:read,'
+                f'apply-row-2,Rollback group grant,peter,2026-05-30,{ticket},'
             ),
             (
-                'disable_user_grant,,api-rollback-service,api:humnos:read,'
-                'apply-row-4,Rollback user grant,peter,2026-05-30,SEC-API-RB,'
+                f'disable_user_grant,,{service_username},api:humnos:read,'
+                f'apply-row-4,Rollback user grant,peter,2026-05-30,{ticket},'
             ),
         ],
     )
     output = io.StringIO()
+    # TODO(P7 Phase 4): replace global grant/audit counts with scoped assertions.
     counts_before = (
         UserApiScopeGrant.objects.count(),
         GroupApiScopeGrant.objects.count(),
@@ -654,21 +708,25 @@ def test_rollback_api_scope_reviewed_plan_dry_run_writes_nothing(
 
 
 def test_rollback_api_scope_reviewed_plan_apply_without_confirm_writes_nothing(
-    api_scopes, tmp_path
+    api_scopes, tmp_path, api_scope_test_namespace
 ):
-    user = User.objects.create_user(username='api-rollback-user')
-    group = Group.objects.create(name='api_rollback_readers')
+    username = api_scope_test_namespace.user('api-rollback-user')
+    group_name = api_scope_test_namespace.group('api_rollback_readers')
+    ticket = api_scope_test_namespace.ticket('RB')
+    user = User.objects.create_user(username=username)
+    group = Group.objects.create(name=group_name)
     user.groups.add(group)
     plan_csv = tmp_path / 'reviewed-api-scope-rollback-plan.csv'
     _write_rollback_plan(
         plan_csv,
         [
             (
-                'remove_user_from_group,api_rollback_readers,api-rollback-user,,'
-                'apply-row-3,Rollback membership,peter,2026-05-30,SEC-API-RB,'
+                f'remove_user_from_group,{group_name},{username},,'
+                f'apply-row-3,Rollback membership,peter,2026-05-30,{ticket},'
             ),
         ],
     )
+    # TODO(P7 Phase 4): replace global audit count with scoped assertions.
     counts_before = (ApiScopeGrantAudit.objects.count(), user.groups.count())
 
     with pytest.raises(CommandError, match='--apply requires --confirm-rollback'):
@@ -684,11 +742,15 @@ def test_rollback_api_scope_reviewed_plan_apply_without_confirm_writes_nothing(
 
 
 def test_rollback_api_scope_reviewed_plan_with_confirm_writes_audit_and_rolls_back(
-    api_scopes, tmp_path
+    api_scopes, tmp_path, api_scope_test_namespace
 ):
-    user = User.objects.create_user(username='api-rollback-user')
-    service_user = User.objects.create_user(username='api-rollback-service')
-    group = Group.objects.create(name='api_rollback_readers')
+    username = api_scope_test_namespace.user('api-rollback-user')
+    service_username = api_scope_test_namespace.user('api-rollback-service')
+    group_name = api_scope_test_namespace.group('api_rollback_readers')
+    ticket = api_scope_test_namespace.ticket('RB')
+    user = User.objects.create_user(username=username)
+    service_user = User.objects.create_user(username=service_username)
+    group = Group.objects.create(name=group_name)
     user.groups.add(group)
     group_grant = GroupApiScopeGrant.objects.create(
         group=group,
@@ -703,16 +765,16 @@ def test_rollback_api_scope_reviewed_plan_with_confirm_writes_audit_and_rolls_ba
         plan_csv,
         [
             (
-                'remove_user_from_group,api_rollback_readers,api-rollback-user,,'
-                'apply-row-3,Rollback membership,peter,2026-05-30,SEC-API-RB,'
+                f'remove_user_from_group,{group_name},{username},,'
+                f'apply-row-3,Rollback membership,peter,2026-05-30,{ticket},'
             ),
             (
-                'disable_group_grant,api_rollback_readers,,api:humnos:read,'
-                'apply-row-2,Rollback group grant,peter,2026-05-30,SEC-API-RB,'
+                f'disable_group_grant,{group_name},,api:humnos:read,'
+                f'apply-row-2,Rollback group grant,peter,2026-05-30,{ticket},'
             ),
             (
-                'disable_user_grant,,api-rollback-service,api:humnos:read,'
-                'apply-row-4,Rollback user grant,peter,2026-05-30,SEC-API-RB,'
+                f'disable_user_grant,,{service_username},api:humnos:read,'
+                f'apply-row-4,Rollback user grant,peter,2026-05-30,{ticket},'
             ),
         ],
     )
@@ -729,17 +791,17 @@ def test_rollback_api_scope_reviewed_plan_with_confirm_writes_audit_and_rolls_ba
 
     group_grant.refresh_from_db()
     user_grant.refresh_from_db()
-    assert user.groups.filter(name='api_rollback_readers').exists() is False
+    assert user.groups.filter(name=group_name).exists() is False
     assert group_grant.enabled is False
     assert user_grant.enabled is False
-    assert Group.objects.filter(name='api_rollback_readers').exists() is True
+    assert Group.objects.filter(name=group_name).exists() is True
 
     rows = list(csv.DictReader(io.StringIO(output.getvalue())))
     assert len(rows) == 3
     assert {row['dry_run'] for row in rows} == {'false'}
     assert {row['status'] for row in rows} == {'rolled_back'}
 
-    audit_rows = ApiScopeGrantAudit.objects.filter(ticket='SEC-API-RB')
+    audit_rows = ApiScopeGrantAudit.objects.filter(ticket=ticket)
     assert audit_rows.count() == 3
     assert {audit.action for audit in audit_rows} == {
         'remove_user_from_group',
@@ -759,10 +821,15 @@ def test_rollback_api_scope_reviewed_plan_with_confirm_writes_audit_and_rolls_ba
 
 
 def test_disposable_apply_rollback_drill_verifies_rollback_of_chain(
-    api_scopes, tmp_path
+    api_scopes, tmp_path, api_scope_test_namespace
 ):
-    user = User.objects.create_user(username='test_user')
-    service_user = User.objects.create_user(username='test_staff_nomenu', is_staff=True)
+    username = api_scope_test_namespace.user('test_user')
+    service_username = api_scope_test_namespace.user('test_staff_nomenu')
+    group_name = api_scope_test_namespace.group('test_api_scope_drill_readers')
+    apply_ticket = api_scope_test_namespace.ticket('DRILL')
+    rollback_ticket = api_scope_test_namespace.ticket('DRILL-RB')
+    user = User.objects.create_user(username=username)
+    service_user = User.objects.create_user(username=service_username, is_staff=True)
     apply_csv = tmp_path / 'api-scope-disposable-reviewed-apply.csv'
     apply_csv.write_text(
         '\n'.join(
@@ -772,22 +839,22 @@ def test_disposable_apply_rollback_drill_verifies_rollback_of_chain(
                     'ticket,rollback_of,notes'
                 ),
                 (
-                    'create_group,test_api_scope_drill_readers,,,1,'
-                    'Disposable drill reader group,peter,2026-05-30,SEC-API-DRILL,,'
+                    f'create_group,{group_name},,,1,'
+                    f'Disposable drill reader group,peter,2026-05-30,{apply_ticket},,'
                 ),
                 (
-                    'create_group_grant,test_api_scope_drill_readers,,api:humnos:read,'
+                    f'create_group_grant,{group_name},,api:humnos:read,'
                     '1,Disposable drill group read grant,peter,2026-05-30,'
-                    'SEC-API-DRILL,,'
+                    f'{apply_ticket},,'
                 ),
                 (
-                    'assign_user_to_group,test_api_scope_drill_readers,test_user,,'
-                    '1,Disposable drill membership,peter,2026-05-30,SEC-API-DRILL,,'
+                    f'assign_user_to_group,{group_name},{username},,'
+                    f'1,Disposable drill membership,peter,2026-05-30,{apply_ticket},,'
                 ),
                 (
-                    'create_user_grant,,test_staff_nomenu,api:humnos:read,'
+                    f'create_user_grant,,{service_username},api:humnos:read,'
                     '1,Disposable drill direct user exception,peter,2026-05-30,'
-                    'SEC-API-DRILL,,'
+                    f'{apply_ticket},,'
                 ),
             ]
         ),
@@ -813,22 +880,22 @@ def test_disposable_apply_rollback_drill_verifies_rollback_of_chain(
         rollback_csv,
         [
             (
-                'remove_user_from_group,test_api_scope_drill_readers,test_user,,'
+                f'remove_user_from_group,{group_name},{username},,'
                 f'{apply_rows["assign_user_to_group"]},'
                 'Disposable drill rollback membership,peter,2026-05-30,'
-                'SEC-API-DRILL-RB,'
+                f'{rollback_ticket},'
             ),
             (
-                'disable_group_grant,test_api_scope_drill_readers,,api:humnos:read,'
+                f'disable_group_grant,{group_name},,api:humnos:read,'
                 f'{apply_rows["create_group_grant"]},'
                 'Disposable drill rollback group grant,peter,2026-05-30,'
-                'SEC-API-DRILL-RB,'
+                f'{rollback_ticket},'
             ),
             (
-                'disable_user_grant,,test_staff_nomenu,api:humnos:read,'
+                f'disable_user_grant,,{service_username},api:humnos:read,'
                 f'{apply_rows["create_user_grant"]},'
                 'Disposable drill rollback user grant,peter,2026-05-30,'
-                'SEC-API-DRILL-RB,'
+                f'{rollback_ticket},'
             ),
         ],
     )
@@ -841,7 +908,7 @@ def test_disposable_apply_rollback_drill_verifies_rollback_of_chain(
         '--confirm-rollback',
     )
 
-    group = Group.objects.get(name='test_api_scope_drill_readers')
+    group = Group.objects.get(name=group_name)
     assert user.groups.filter(name=group.name).exists() is False
     assert not GroupApiScopeGrant.objects.filter(group=group, enabled=True).exists()
     assert not UserApiScopeGrant.objects.filter(user=service_user, enabled=True).exists()
@@ -857,13 +924,13 @@ def test_disposable_apply_rollback_drill_verifies_rollback_of_chain(
     ).exists()
 
     apply_event_ids = set(
-        ApiScopeGrantAudit.objects.filter(ticket='SEC-API-DRILL').values_list(
+        ApiScopeGrantAudit.objects.filter(ticket=apply_ticket).values_list(
             'event_id',
             flat=True,
         )
     )
     rollback_events = ApiScopeGrantAudit.objects.filter(
-        ticket='SEC-API-DRILL-RB'
+        ticket=rollback_ticket
     )
     assert rollback_events.count() == 3
     assert {event.rollback_of for event in rollback_events} == {
@@ -875,10 +942,13 @@ def test_disposable_apply_rollback_drill_verifies_rollback_of_chain(
 
 
 def test_rollback_api_scope_reviewed_plan_transaction_failure_rolls_back(
-    api_scopes, tmp_path, monkeypatch
+    api_scopes, tmp_path, monkeypatch, api_scope_test_namespace
 ):
-    user = User.objects.create_user(username='api-rollback-tx-user')
-    group = Group.objects.create(name='api_rollback_tx_group')
+    username = api_scope_test_namespace.user('api-rollback-tx-user')
+    group_name = api_scope_test_namespace.group('api_rollback_tx_group')
+    ticket = api_scope_test_namespace.ticket('RB-TX')
+    user = User.objects.create_user(username=username)
+    group = Group.objects.create(name=group_name)
     user.groups.add(group)
     grant = GroupApiScopeGrant.objects.create(
         group=group,
@@ -889,12 +959,12 @@ def test_rollback_api_scope_reviewed_plan_transaction_failure_rolls_back(
         plan_csv,
         [
             (
-                'disable_group_grant,api_rollback_tx_group,,api:humnos:read,'
-                'apply-row-2,Rollback group grant,peter,2026-05-30,SEC-API-RB-TX,'
+                f'disable_group_grant,{group_name},,api:humnos:read,'
+                f'apply-row-2,Rollback group grant,peter,2026-05-30,{ticket},'
             ),
             (
-                'remove_user_from_group,api_rollback_tx_group,api-rollback-tx-user,,'
-                'apply-row-3,Rollback membership,peter,2026-05-30,SEC-API-RB-TX,'
+                f'remove_user_from_group,{group_name},{username},,'
+                f'apply-row-3,Rollback membership,peter,2026-05-30,{ticket},'
             ),
         ],
     )
@@ -922,5 +992,5 @@ def test_rollback_api_scope_reviewed_plan_transaction_failure_rolls_back(
 
     grant.refresh_from_db()
     assert grant.enabled is True
-    assert user.groups.filter(name='api_rollback_tx_group').exists() is True
-    assert ApiScopeGrantAudit.objects.filter(ticket='SEC-API-RB-TX').exists() is False
+    assert user.groups.filter(name=group_name).exists() is True
+    assert ApiScopeGrantAudit.objects.filter(ticket=ticket).exists() is False
