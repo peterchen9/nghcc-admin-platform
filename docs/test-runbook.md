@@ -1,6 +1,6 @@
 # Test Runbook
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 This runbook is for local test execution on current `main`. It does not change production application logic, permission behavior, production workflow, `API_PERMISSION_MODE`, database isolation, or CI behavior.
 
@@ -73,6 +73,6 @@ Before considering xdist or parallel CI, the project needs reviewed marker cover
 
 ## Repo Root Hygiene Note
 
-The repo root currently contains unexpected empty directories named `pytest.ini;C` and `tests;C`. They are not handled by this runbook update.
+P13 confirmed the previously observed repo-root directories `pytest.ini;C` and `tests;C` were empty and removed them.
 
-Until those directories are removed in a separate cleanup, do not describe marker discovery or working-directory behavior as completely clean.
+Pytest discovery now points at the real `pytest.ini` file and `tests/` directory. This runbook note is historical governance context only; P13 was not a DB isolation, `pytest-xdist`, CI, backend, `tests/`, or test behavior change.

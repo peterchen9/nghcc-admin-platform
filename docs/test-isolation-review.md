@@ -1,6 +1,6 @@
 # Test Isolation Review
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 ## Boundary
 
@@ -123,7 +123,7 @@ This is appropriate for staging-like smoke checks that validate restored DB/medi
 
 `pytest.ini` has no xdist configuration and no per-worker database suffixing. It does register `read_only`, `mutating`, `csrf`, and `api_scope`, and marker coverage has expanded beyond the initial P7 API scope storage module. However, the smoke and CSRF wrappers still do not select by marker, so marker coverage does not yet provide execution isolation.
 
-The repo root also currently contains unexpected empty directories named `pytest.ini;C` and `tests;C`. Until those are removed in a separate cleanup, marker discovery and working-directory behavior should not be described as completely clean.
+P13 confirmed the previously observed repo-root directories `pytest.ini;C` and `tests;C` were empty and removed both. Pytest discovery now points at the real `pytest.ini` file and `tests/` directory. This was repo-root hygiene only, not a DB isolation, `pytest-xdist`, CI, backend, `tests/`, or test behavior change.
 
 ## Pytest Parallel Safety
 

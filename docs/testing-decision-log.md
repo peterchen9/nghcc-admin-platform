@@ -1,10 +1,10 @@
 # Testing Decision Log
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 ## Scope
 
-This log records testing governance decisions only. P12 did not modify tests, backend code, CI, database state, or parallel execution settings, and did not run pytest.
+This log records testing governance decisions only. P14 did not modify tests, backend code, CI, database state, pytest discovery settings, or parallel execution settings, and did not run pytest.
 
 ## Decisions
 
@@ -23,6 +23,7 @@ This log records testing governance decisions only. P12 did not modify tests, ba
 | 2026-05-31 | P11 | Treat `pytest.ini;C` and `tests;C` as a separate repo-hygiene cleanup item. | They appear empty and not active in normal discovery, but deletion was outside the approved phase. | Completed |
 | 2026-05-31 | P12 | Establish `testing-baseline` and `testing-decision-log` as governance records. | Future testing changes need a stable baseline and auditable decision trail. | Completed |
 | 2026-05-31 | P13 | Remove `pytest.ini;C` and `tests;C` after confirming both were empty and had no active references in `scripts/`, `.github/`, `tests/`, or `backend/`. | Repo-root hygiene closure reduces discovery and working-directory noise without changing test behavior. | Completed |
+| 2026-06-01 | P14 | Align active governance references to describe `pytest.ini;C` and `tests;C` as previously observed and removed in P13. | Readers should not infer the empty `;C` directories still exist after P13. | Completed |
 
 ## Current Guardrails
 
@@ -31,6 +32,7 @@ This log records testing governance decisions only. P12 did not modify tests, ba
 - Do not add parallel CI test jobs that share DB state.
 - Do not use markers as wrapper selection until marker accuracy is reviewed.
 - `pytest.ini;C` and `tests;C` were removed in P13 after explicit cleanup approval and safety checks.
+- Pytest discovery points at the real `pytest.ini` file and `tests/` directory.
 - Do not infer production permission readiness from local marker coverage.
 
 ## Next Decision Required
@@ -39,9 +41,9 @@ The next real change should be explicitly scoped before implementation. The like
 
 1. Further marker audit for login/auth helper write behavior.
 2. Separate design spike for per-worker DB isolation.
-3. A documentation-only review of stale historical references to the removed `;C` directories, if desired.
+3. Review stale historical references only if new active wording implies the removed `;C` directories still exist.
 
-None of these are approved by P13.
+None of these are approved by P14.
 
 ## P13 Verification Record
 
@@ -52,4 +54,10 @@ None of these are approved by P13.
 - `pytest.ini` sets `testpaths = tests`, pointing discovery at the real `tests/` directory.
 - Both empty `;C` directories were removed.
 - P13 did not change DB isolation, `pytest-xdist`, CI, deploy behavior, `.240`, API scope assignment, tests, backend code, or pytest behavior.
+- Pytest was not executed.
+
+## P14 Reference Alignment Record
+
+- Active governance references now describe `pytest.ini;C` and `tests;C` as previously observed and removed in P13.
+- P14 did not change DB isolation, `pytest-xdist`, CI, deploy behavior, `.240`, API scope assignment, tests, backend code, pytest config, or pytest behavior.
 - Pytest was not executed.

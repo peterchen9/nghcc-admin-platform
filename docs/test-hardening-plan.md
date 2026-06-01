@@ -1,6 +1,6 @@
 # Test-only Hardening Plan
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 ## Scope
 
@@ -337,4 +337,4 @@ Current marker coverage includes module-level `read_only` markers for smoke chec
 
 The marker expansion did not change wrapper execution. `.\scripts\run-smoke-tests.ps1` and `.\scripts\run-csrf-tests.ps1` still run broad suite targets rather than marker-selected subsets, and there was no parallel or xdist change.
 
-Repo-root hygiene is not fully clean yet: unexpected empty directories `pytest.ini;C` and `tests;C` remain present. Until they are handled separately, marker discovery and working-directory behavior should not be described as completely clean.
+Repo-root hygiene note: P13 confirmed the previously observed `pytest.ini;C` and `tests;C` paths were empty directories, removed both, and left pytest discovery pointed at the real `pytest.ini` file and `tests/` directory. This was not a DB isolation, `pytest-xdist`, CI, backend, `tests/`, or test behavior change.

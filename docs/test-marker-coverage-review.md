@@ -1,6 +1,6 @@
 # P8/P9 Marker Coverage Review
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 ## Scope
 
@@ -12,7 +12,7 @@ The scan covers `tests/` on current `main`.
 
 - `pytest.ini` registers `read_only`, `mutating`, `csrf`, and `api_scope`, sets `pythonpath = backend`, and sets `testpaths = tests`.
 - `tests/conftest.py` has an autouse `allow_existing_database_access(django_db_blocker)` fixture. Every test can access the already-restored local database instead of a pytest-managed disposable test DB.
-- The repo root contains unexpected directories named `pytest.ini;C` and `tests;C`. This review did not inspect or repair them. They should be checked before relying on marker discovery or container working-directory assumptions.
+- P13 confirmed the previously observed repo-root directories `pytest.ini;C` and `tests;C` were empty and removed both. Pytest discovery now points at the real `pytest.ini` file and `tests/` directory.
 - Because `testpaths = tests` depends on pytest running from the repo root, container or script working-directory drift could cause collection or marker registration surprises. No fix was made in this phase.
 - Authentication helpers are conservative DB-write risks: `client.login()`, `client.force_login()`, `logged_in_client`, and `admin_client` may update `auth_user.last_login` through Django login signals. Files using them should not be marked `read_only` until verified or isolated.
 

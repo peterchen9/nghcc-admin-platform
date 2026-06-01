@@ -1,13 +1,12 @@
 # DB Isolation Strategy
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 ## Boundary
 
-P11 is documentation-only.
+P11 was documentation-only. P14 is documentation-only reference alignment after P13.
 
-- Do not delete `pytest.ini;C`.
-- Do not delete `tests;C`.
+- `pytest.ini;C` and `tests;C` were previously observed and were removed in P13 after both were confirmed empty.
 - Do not modify fixtures.
 - Do not modify the database.
 - Do not enable `pytest-xdist`.
@@ -23,7 +22,7 @@ P13 repo-root hygiene closure is limited to the two previously documented empty 
 
 ## Empty Directory Risk Review
 
-The repo root currently contains two unexpected directories:
+P11 observed two unexpected repo-root directories before cleanup:
 
 | Path | Type | Created | Last written | Contents |
 | --- | --- | --- | --- | --- |
@@ -48,7 +47,7 @@ Search did not find any script or workflow intentionally referencing `pytest.ini
 testpaths = tests
 ```
 
-That points pytest discovery at the real `tests` directory. The empty `tests;C` directory should not be collected by normal repo-root pytest discovery because it is not named `tests` and is not listed in `testpaths`.
+That points pytest discovery at the real `tests` directory. The previously observed empty `tests;C` directory was not expected to be collected by normal repo-root pytest discovery because it was not named `tests` and was not listed in `testpaths`.
 
 Current CI is not affected by these directories. `.github/workflows/smoke-tests.yml` builds containers and prints a placeholder message. It does not run pytest, `run-smoke-tests`, or `run-csrf-tests`.
 

@@ -1,6 +1,6 @@
 # Testing Baseline
 
-Updated: 2026-05-31
+Updated: 2026-06-01
 
 ## Scope
 
@@ -13,7 +13,7 @@ P12 is documentation governance only.
 - No pytest execution.
 - No `pytest-xdist` enablement.
 
-This baseline consolidates the decisions from P7 through P13 and records the current safe testing posture for later work.
+This baseline consolidates the decisions from P7 through P14 and records the current safe testing posture for later work.
 
 ## Current Baseline
 
@@ -49,6 +49,7 @@ Marker coverage is broader after P9, but it is not yet a control plane for wrapp
 | P10 documentation alignment | Runbook and hardening docs aligned around serial wrapper execution and advisory markers. | `docs/test-runbook.md` |
 | P11 DB isolation strategy review | Current shared-restored-DB model retained; future isolation options recorded. | `docs/db-isolation-strategy.md` |
 | P13 repo-root hygiene closure | Verified and removed the two empty `;C` repo-root directories. | `docs/db-isolation-strategy.md` |
+| P14 active governance reference alignment | Stale active references to the removed `;C` directories were rewritten as historical P13 context. | `docs/test-runbook.md`, `docs/test-isolation-review.md`, `docs/test-hardening-plan.md`, `docs/test-marker-coverage-review.md`, `docs/db-isolation-strategy.md` |
 
 ## Baseline Decisions
 
@@ -63,7 +64,9 @@ Marker coverage is broader after P9, but it is not yet a control plane for wrapp
 
 P13 confirmed `pytest.ini;C` and `tests;C` were empty directories and removed them.
 
-This closure did not change DB isolation, `pytest-xdist`, CI, deploy behavior, `.240`, API scope assignment, tests, backend code, or pytest behavior. Pytest was not executed.
+P14 aligned active governance wording so readers do not infer those directories still exist. Pytest discovery now points at the real `pytest.ini` file and `tests/` directory.
+
+This closure and alignment did not change DB isolation, `pytest-xdist`, CI, deploy behavior, `.240`, API scope assignment, tests, backend code, or pytest behavior. Pytest was not executed.
 
 ## Future Change Gate
 

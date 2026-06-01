@@ -600,3 +600,27 @@ Cleanup completed:
 Closure decision:
 - This was not a DB isolation, `pytest-xdist`, CI, deploy, `.240`, API scope assignment, or test behavior change.
 - Pytest was not executed.
+
+## P14 Active Governance Reference Alignment
+
+Updated: 2026-06-01
+
+Scope:
+- Documentation semantics only.
+- No `tests/` changes.
+- No `backend/` changes.
+- No `pytest.ini` changes.
+- No CI changes.
+- No DB changes.
+- No pytest execution.
+- No `pytest-xdist` enablement.
+- No deploy or `.240` work.
+- No API scope assignment.
+
+Alignment completed:
+- Active governance references now describe `pytest.ini;C` and `tests;C` as previously observed empty directories that P13 removed.
+- P13 confirmation remains explicit: both paths were empty directories before cleanup, no active references were found in `scripts/`, `.github/`, `tests/`, or `backend/`, and pytest discovery points at the real `pytest.ini` file and `tests/` directory.
+
+Closure decision:
+- P14 was not a DB isolation, `pytest-xdist`, CI, deploy, `.240`, backend, `tests/`, API scope assignment, or test behavior change.
+- Pytest was not executed.
