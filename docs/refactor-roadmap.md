@@ -528,7 +528,7 @@ Review package contents:
 - Role group design for hymn and humnos API scopes.
 - Explicit rollback flow and rollback mapping.
 - Audit flow for reviewed apply and rollback commands.
-- Pending `peterchen` assignments that remain excluded from the final reviewed apply CSV.
+- Deferred `peterchen` assignments that remain excluded from the final reviewed apply CSV.
 - Approval Checklist.
 - Reject Checklist.
 - Apply Prerequisites for a later separately approved local apply phase.

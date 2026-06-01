@@ -4,7 +4,7 @@ Created: 2026-05-31
 
 ## Purpose
 
-This package summarizes the API scope design, role group design, rollback flow, audit flow, and pending user assignments for operational permission manager review.
+This package summarizes the API scope design, role group design, rollback flow, audit flow, and deferred user assignments for operational permission manager review.
 
 This phase is review-only. It does not deploy to `.240`, connect to `.240`, modify `.240`, run `--apply`, enable `API_PERMISSION_MODE=enforce`, or modify any grants, groups, or users.
 
@@ -12,7 +12,7 @@ This phase is review-only. It does not deploy to `.240`, connect to `.240`, modi
 
 | Artifact | Purpose |
 | --- | --- |
-| `docs/api-scope-reviewed-backfill-plan.md` | Reviewed backfill proposal, suggested role groups, group grants, and pending user assignments. |
+| `docs/api-scope-reviewed-backfill-plan.md` | Reviewed backfill proposal, suggested role groups, group grants, and originally pending, now deferred user assignments. |
 | `docs/api-scope-final-apply-dry-run-review.md` | Final checksum-pinned apply and rollback CSV dry-run review results. |
 | `docs/api-scope-reviewed-apply-plan.md` | Reviewed apply CSV contract, dry-run behavior, apply safety gates, and audit requirements. |
 | `docs/api-scope-reviewed-rollback-plan.md` | Reviewed rollback CSV contract, rollback actions, confirmation gates, and transaction rules. |
@@ -177,7 +177,7 @@ Permission manager approval should confirm all applicable items before any later
 - [ ] Confirm staff users should continue receiving no API scopes by default.
 - [ ] Confirm superusers should remain audited bypass users, not grant-backfilled users.
 - [ ] Confirm menu/page visibility must not imply API scope access.
-- [ ] Confirm pending `peterchen` assignments are either approved in a separate assignment package or remain excluded.
+- [ ] Confirm deferred `peterchen` assignments are either approved in a separate assignment package or remain excluded.
 - [ ] Confirm the rollback CSV disables grants and keeps groups by default.
 - [ ] Confirm `API_PERMISSION_MODE=off` remains the default and operational rollback lever.
 - [ ] Confirm no `.240` deployment, connection, modification, or permission mutation is approved by this package.
