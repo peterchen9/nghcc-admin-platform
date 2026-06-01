@@ -510,7 +510,7 @@ Review result:
 - Apply dry-run passed with checksum, reviewer, ticket, and plan version pinning.
 - Rollback dry-run passed with checksum, reviewer, and ticket pinning.
 
-Next recommended step: have an operational reviewer approve or reject each pending `peterchen` assignment. Any approved assignment should be handled in a separate reviewed assignment CSV with a new checksum and another dry-run review before any local apply is considered.
+Next recommended step at that time: have an operational reviewer approve or reject each pending `peterchen` assignment. P18A later recorded these assignments as deferred pending business owner and least-privilege confirmation. Any approved assignment should be handled in a separate reviewed assignment CSV with a new checksum and another dry-run review before any local apply is considered.
 
 ## API Scope Operational Review Package
 
@@ -535,10 +535,11 @@ Review package contents:
 
 Current status:
 - Final group and group-grant CSV artifacts remain dry-run reviewed only.
-- `peterchen` assignments remain pending and require explicit approve/reject decisions.
+- Role groups and group grants are approved as governance design only in P18A; they are not applied.
+- `peterchen` assignments are deferred and require business owner and least-privilege confirmation before any later approval.
 - Enforcement remains out of scope.
 
-Next recommended step: permission manager approval or rejection of role groups, group grants, and the three pending `peterchen` assignments. Any approved assignment should be handled in a separate checksum-pinned assignment package before any local apply is considered.
+Next recommended step: business owner and least-privilege review for the deferred `peterchen` assignments. Any future approved assignment must be handled in a separate checksum-pinned assignment package with matching rollback CSV and another dry-run review before any local apply is considered.
 
 ## Testing Governance Closure P7-P12
 
@@ -654,3 +655,31 @@ Policy recorded:
 Closure decision:
 - P16 was not a DB isolation, `pytest-xdist`, CI, deploy, `.240`, backend, `tests/`, API scope assignment, or test behavior change.
 - Pytest was not executed.
+
+## P18A Permission Governance Decision Documentation
+
+Updated: 2026-06-02
+
+Scope:
+- Documentation governance only.
+- Only `docs/` was changed.
+- No CSV or assignment package was created.
+- Reviewed apply and rollback CSV artifacts were not modified.
+- No `backend/`, `tests/`, CI, database, deploy, or `.240` work.
+- No apply or rollback was executed.
+- `API_PERMISSION_MODE=off` remains the default; `enforce` was not enabled.
+- No API scope assignment was performed.
+
+Governance decisions recorded:
+- Approved role group design: `api_hymns_readers`, `api_hymns_editors`, `api_hymns_uploaders`, `api_humnos_readers`, and `api_humnos_operators`.
+- Approved group grant design: `api_hymns_readers -> api:hymns:read`; `api_hymns_editors -> api:hymns:read`; `api_hymns_editors -> api:hymns:write`; `api_hymns_uploaders -> api:hymns:read`; `api_hymns_uploaders -> api:hymns:upload`; `api_humnos_readers -> api:humnos:read`; `api_humnos_operators -> api:humnos:read`; `api_humnos_operators -> api:humnos:write`.
+- Deferred assignments: `peterchen -> api_hymns_editors`, `peterchen -> api_hymns_uploaders`, and `peterchen -> api_humnos_operators`.
+
+Decision boundaries:
+- Group and grant approval is governance design approval only; it does not mean any row has been applied.
+- Apply is not authorized at this stage.
+- Assignment package creation is not authorized at this stage.
+- Deferred does not mean rejected; deferred assignments wait for business owner and least-privilege confirmation.
+- If any future `peterchen` assignment is approved, it must be handled in a separate reviewed assignment CSV and matching rollback CSV with a new ticket, new checksum, and another checksum-pinned dry-run review before any apply is considered.
+
+Next recommended step: keep the approved group/grant design as a governance record and separately review the deferred `peterchen` assignments with the business owner and least-privilege criteria. Do not create an assignment package or run apply until a later phase explicitly approves that work.

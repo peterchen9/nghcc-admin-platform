@@ -54,6 +54,53 @@ The reviewed design prefers role groups over direct user grants.
 
 The final reviewed apply CSV contains five `create_group` rows and eight `create_group_grant` rows. It intentionally contains no `assign_user_to_group` rows and no `create_user_grant` rows.
 
+## Governance Decision Record
+
+Decision captured: 2026-06-02
+
+This decision records permission governance approval for the role group design and group grant design only. It does not authorize apply, rollback, assignment package creation, database mutation, deployment, `.240` access, or `API_PERMISSION_MODE=enforce`.
+
+Approved role groups:
+
+| Group | Decision | Notes |
+| --- | --- | --- |
+| `api_hymns_readers` | Approved | Governance design approval only; not applied. |
+| `api_hymns_editors` | Approved | Governance design approval only; not applied. |
+| `api_hymns_uploaders` | Approved | Governance design approval only; not applied. |
+| `api_humnos_readers` | Approved | Governance design approval only; not applied. |
+| `api_humnos_operators` | Approved | Governance design approval only; not applied. |
+
+Approved group grants:
+
+| Group | Scope | Decision | Notes |
+| --- | --- | --- | --- |
+| `api_hymns_readers` | `api:hymns:read` | Approved | Governance design approval only; not applied. |
+| `api_hymns_editors` | `api:hymns:read` | Approved | Governance design approval only; not applied. |
+| `api_hymns_editors` | `api:hymns:write` | Approved | Governance design approval only; not applied. |
+| `api_hymns_uploaders` | `api:hymns:read` | Approved | Governance design approval only; not applied. |
+| `api_hymns_uploaders` | `api:hymns:upload` | Approved | Governance design approval only; not applied. |
+| `api_humnos_readers` | `api:humnos:read` | Approved | Governance design approval only; not applied. |
+| `api_humnos_operators` | `api:humnos:read` | Approved | Governance design approval only; not applied. |
+| `api_humnos_operators` | `api:humnos:write` | Approved | Governance design approval only; not applied. |
+
+Deferred assignments:
+
+| Username | Candidate group | Covered scopes | Decision | Notes |
+| --- | --- | --- | --- | --- |
+| `peterchen` | `api_hymns_editors` | `api:hymns:read`, `api:hymns:write` | Deferred | Deferred does not mean rejected; waits for business owner and least-privilege confirmation. |
+| `peterchen` | `api_hymns_uploaders` | `api:hymns:read`, `api:hymns:upload` | Deferred | Deferred does not mean rejected; waits for business owner and least-privilege confirmation. |
+| `peterchen` | `api_humnos_operators` | `api:humnos:read`, `api:humnos:write` | Deferred | Deferred does not mean rejected; waits for business owner and least-privilege confirmation. |
+
+Decision constraints:
+
+1. Group and grant approval is governance design approval only; it does not mean any row has been applied.
+2. Apply is not allowed in this phase.
+3. Assignment package creation is not allowed in this phase.
+4. Deferred assignments are not rejected; they wait for business owner and least-privilege confirmation.
+5. If any future `peterchen` assignment is approved, it must be handled in a separate reviewed assignment CSV and matching rollback CSV with a new ticket, new checksum, and another checksum-pinned dry-run review before any apply is considered.
+6. `API_PERMISSION_MODE=off` remains the default. `enforce` is not enabled.
+7. This phase does not touch the database, `.240`, deployment, reviewed CSV artifacts, backend code, tests, or CI.
+
 Final reviewed apply artifact:
 
 - File: `docs/reviewed/api-scope-final-reviewed-apply.csv`
@@ -108,17 +155,17 @@ Audit expectations for reviewed apply and rollback:
 6. Audit rows include action, principal, scope, previous state, planned/new state, result, row number, checksum, reviewer, ticket, and rollback reference where applicable.
 7. Report-only CSVs expose only safe fields: `time`, `user_id`, `endpoint`, `method`, `scope`, `decision`, and `reason`.
 
-## Pending Assignments
+## Deferred Assignments
 
-The following assignments remain pending. They were intentionally excluded from the final reviewed apply CSV and cannot be applied by that artifact.
+The following assignments are deferred. They were intentionally excluded from the final reviewed apply CSV and cannot be applied by that artifact.
 
 | Username | Candidate group | Covered scopes | Current status | Required decision |
 | --- | --- | --- | --- | --- |
-| `peterchen` | `api_hymns_editors` | `api:hymns:read`, `api:hymns:write` | Pending | Approve or reject hymn metadata write access. |
-| `peterchen` | `api_hymns_uploaders` | `api:hymns:read`, `api:hymns:upload` | Pending | Approve or reject hymn upload access. |
-| `peterchen` | `api_humnos_operators` | `api:humnos:read`, `api:humnos:write` | Pending | Approve or reject humnos operator access. |
+| `peterchen` | `api_hymns_editors` | `api:hymns:read`, `api:hymns:write` | Deferred | Await business owner and least-privilege confirmation. |
+| `peterchen` | `api_hymns_uploaders` | `api:hymns:read`, `api:hymns:upload` | Deferred | Await business owner and least-privilege confirmation. |
+| `peterchen` | `api_humnos_operators` | `api:humnos:read`, `api:humnos:write` | Deferred | Await business owner and least-privilege confirmation. |
 
-If any pending assignment is approved, it must be handled in a separate reviewed assignment CSV with a new ticket, new checksum, matching rollback CSV, and another dry-run review. Do not edit the existing final apply CSV to add assignments.
+Deferred does not mean rejected. If any deferred assignment is approved later, it must be handled in a separate reviewed assignment CSV with a new ticket, new checksum, matching rollback CSV, and another checksum-pinned dry-run review. Do not edit the existing final apply CSV to add assignments.
 
 ## Approval Checklist
 
@@ -151,7 +198,7 @@ Reject this package or block apply planning if any item is true:
 
 - [ ] A role group is too broad or named ambiguously.
 - [ ] A group grant gives write/upload/operator access beyond the role owner's intent.
-- [ ] A pending assignment lacks an explicit business owner approval.
+- [ ] A deferred or proposed assignment is treated as approved without explicit business owner and least-privilege confirmation.
 - [ ] A direct user grant is being requested without documented exception review.
 - [ ] The reviewed apply CSV checksum does not match `aabbeda8c4382330281cfd897eb6562813db6beb50bc5fbcf53d093a4c473f12`.
 - [ ] The reviewed rollback CSV checksum does not match `45c59e89d01a9f8fdc3b04f4749a5686ac81a5918f5eefd348131c85144ad4fb`.
@@ -174,7 +221,7 @@ Rejection result should record:
 This package does not authorize apply. A later apply phase must meet all prerequisites below before any local apply is considered:
 
 1. Obtain explicit permission manager approval for the role groups and group grants.
-2. Resolve every pending assignment as approved or rejected.
+2. Resolve every deferred assignment as approved, rejected, or explicitly kept deferred.
 3. For approved assignments, create a separate reviewed assignment apply CSV and matching rollback CSV with a new ticket and checksum.
 4. Recompute and record SHA-256 checksums for every final apply and rollback CSV.
 5. Run apply dry-run with `--expected-plan-version`, `--expected-checksum`, `--reviewed-by`, and `--ticket`.
@@ -188,9 +235,9 @@ This package does not authorize apply. A later apply phase must meet all prerequ
 
 ## Current Review Status
 
-- Role groups: proposed and dry-run validated.
-- Group grants: proposed and dry-run validated.
-- User assignments: pending and excluded from final reviewed apply CSV.
+- Role groups: approved as governance design; dry-run validated; not applied.
+- Group grants: approved as governance design; dry-run validated; not applied.
+- User assignments: deferred and excluded from final reviewed apply CSV.
 - Direct user grants: none proposed.
 - Rollback plan: dry-run validated for the eight group grant rows.
 - Enforcement: not enabled.
@@ -199,4 +246,4 @@ This package does not authorize apply. A later apply phase must meet all prerequ
 
 ## Next Step
 
-The permission manager should approve or reject the group design and resolve the pending `peterchen` assignments. Any approved assignment requires a separate reviewed assignment package before any local apply is considered. Enforcement remains out of scope.
+The next governance step is business owner and least-privilege review for the deferred `peterchen` assignments. No apply is currently authorized. Any approved assignment requires a separate reviewed assignment package with matching rollback CSV, new ticket, new checksum, and checksum-pinned dry-run review before any local apply is considered. Enforcement remains out of scope.
