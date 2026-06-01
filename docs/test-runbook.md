@@ -40,6 +40,22 @@ pytest -m "api_scope and mutating"
 
 These commands are advisory. They do not replace the existing wrapper scripts and do not make the suite parallel-safe.
 
+## Auth Helper Marker Policy
+
+The `read_only` marker is an advisory marker only. It is not a transaction guarantee, a no-session-write guarantee, or a `pytest-xdist` / parallel-safety guarantee.
+
+Tests that use Django auth or session helpers should be treated as auth/session mutation risks unless a later review proves otherwise. This includes direct or fixture-mediated use of:
+
+- `client.login()`
+- `force_login()`
+- `logged_in_client`
+- `admin_client`
+- other login or session fixtures
+
+Authenticated GET tests can still save session state or trigger auth side effects. Do not place tests using these helpers into a truly parallel-safe read-only bucket unless there is explicit evidence that the project/runtime does not write session or auth state for that path.
+
+Anonymous write-endpoint rejection tests also should not be automatically marked `read_only`; rejected POST, PUT, DELETE, upload, or user-management paths still exercise write surfaces. Settings reload tests may remain `read_only` when they do not touch the DB, but they are process-global mutations rather than proof of parallel safety. Global count assertions prove only the checked count at that point in one process; they are not evidence that the test is safe under concurrent writers.
+
 ## Required Serial Commands
 
 Smoke and CSRF wrappers must still run one at a time:

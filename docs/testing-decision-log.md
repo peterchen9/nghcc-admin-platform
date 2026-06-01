@@ -4,7 +4,7 @@ Updated: 2026-06-01
 
 ## Scope
 
-This log records testing governance decisions only. P14 did not modify tests, backend code, CI, database state, pytest discovery settings, or parallel execution settings, and did not run pytest.
+This log records testing governance decisions only. P16 did not modify tests, backend code, CI, database state, pytest discovery settings, or parallel execution settings, and did not run pytest.
 
 ## Decisions
 
@@ -24,6 +24,7 @@ This log records testing governance decisions only. P14 did not modify tests, ba
 | 2026-05-31 | P12 | Establish `testing-baseline` and `testing-decision-log` as governance records. | Future testing changes need a stable baseline and auditable decision trail. | Completed |
 | 2026-05-31 | P13 | Remove `pytest.ini;C` and `tests;C` after confirming both were empty and had no active references in `scripts/`, `.github/`, `tests/`, or `backend/`. | Repo-root hygiene closure reduces discovery and working-directory noise without changing test behavior. | Completed |
 | 2026-06-01 | P14 | Align active governance references to describe `pytest.ini;C` and `tests;C` as previously observed and removed in P13. | Readers should not infer the empty `;C` directories still exist after P13. | Completed |
+| 2026-06-01 | P16 | Treat Django auth/session helpers as mutation risks for marker policy. | `read_only` is advisory only and does not prove transaction isolation, no session writes, or parallel safety. | Completed |
 
 ## Current Guardrails
 
@@ -33,6 +34,8 @@ This log records testing governance decisions only. P14 did not modify tests, ba
 - Do not use markers as wrapper selection until marker accuracy is reviewed.
 - `pytest.ini;C` and `tests;C` were removed in P13 after explicit cleanup approval and safety checks.
 - Pytest discovery points at the real `pytest.ini` file and `tests/` directory.
+- `read_only` is not a transaction guarantee, no-session-write guarantee, or `pytest-xdist` / parallel-safety guarantee.
+- Tests using `client.login()`, `force_login()`, `logged_in_client`, `admin_client`, or other login/session fixtures stay out of any truly parallel-safe read-only bucket unless later evidence proves no session or auth writes.
 - Do not infer production permission readiness from local marker coverage.
 
 ## Next Decision Required
@@ -43,7 +46,7 @@ The next real change should be explicitly scoped before implementation. The like
 2. Separate design spike for per-worker DB isolation.
 3. Review stale historical references only if new active wording implies the removed `;C` directories still exist.
 
-None of these are approved by P14.
+None of these are approved by P16.
 
 ## P13 Verification Record
 
@@ -60,4 +63,15 @@ None of these are approved by P14.
 
 - Active governance references now describe `pytest.ini;C` and `tests;C` as previously observed and removed in P13.
 - P14 did not change DB isolation, `pytest-xdist`, CI, deploy behavior, `.240`, API scope assignment, tests, backend code, pytest config, or pytest behavior.
+- Pytest was not executed.
+
+## P16 Auth Helper Marker Policy Record
+
+- `read_only` is advisory only. It is not a transaction guarantee, no-session-write guarantee, or `pytest-xdist` / parallel-safety guarantee.
+- `client.login()`, `force_login()`, `logged_in_client`, `admin_client`, and other login/session fixtures are treated as auth/session mutation risks until proven otherwise.
+- Authenticated GET tests can still save session state or trigger auth side effects.
+- Anonymous write-endpoint rejection tests are not automatically `read_only`.
+- Settings reload tests may remain `read_only` when DB-free, but they are process-global mutations rather than parallel-safety evidence.
+- Global count assertions are not proof that a test is safe under concurrent writers.
+- P16 did not change DB isolation, `pytest-xdist`, CI, deploy behavior, `.240`, API scope assignment, tests, backend code, pytest config, or pytest behavior.
 - Pytest was not executed.

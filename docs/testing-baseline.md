@@ -13,7 +13,7 @@ P12 is documentation governance only.
 - No pytest execution.
 - No `pytest-xdist` enablement.
 
-This baseline consolidates the decisions from P7 through P14 and records the current safe testing posture for later work.
+This baseline consolidates the decisions from P7 through P16 and records the current safe testing posture for later work.
 
 ## Current Baseline
 
@@ -50,6 +50,7 @@ Marker coverage is broader after P9, but it is not yet a control plane for wrapp
 | P11 DB isolation strategy review | Current shared-restored-DB model retained; future isolation options recorded. | `docs/db-isolation-strategy.md` |
 | P13 repo-root hygiene closure | Verified and removed the two empty `;C` repo-root directories. | `docs/db-isolation-strategy.md` |
 | P14 active governance reference alignment | Stale active references to the removed `;C` directories were rewritten as historical P13 context. | `docs/test-runbook.md`, `docs/test-isolation-review.md`, `docs/test-hardening-plan.md`, `docs/test-marker-coverage-review.md`, `docs/db-isolation-strategy.md` |
+| P16 auth helper marker policy | Documented that auth/session helpers are mutation risks and that `read_only` is advisory, not a transaction or parallel-safety guarantee. | `docs/test-runbook.md`, `docs/test-marker-coverage-review.md` |
 
 ## Baseline Decisions
 
@@ -59,6 +60,9 @@ Marker coverage is broader after P9, but it is not yet a control plane for wrapp
 4. The current shared restored DB is acceptable for local smoke/staging-like verification, but not for concurrent mutating pytest processes.
 5. Namespace cleanup and scoped assertions reduce collision risk, but they do not replace per-worker DB isolation.
 6. P13 removed the previously documented empty repo-root directories `pytest.ini;C` and `tests;C` after confirming they were empty and had no active references in `scripts/`, `.github/`, `tests/`, or `backend/`.
+7. `read_only` is an advisory marker only. It is not a transaction guarantee, no-session-write guarantee, or `pytest-xdist` / parallel-safety guarantee.
+8. Tests using `client.login()`, `force_login()`, `logged_in_client`, `admin_client`, or other login/session fixtures are auth/session mutation risks unless later evidence proves otherwise.
+9. Authenticated GET tests, anonymous write-endpoint rejection tests, settings reload tests, and global count assertions require conservative interpretation before they can support any parallel-safe read-only bucket.
 
 ## Repo Root Hygiene
 

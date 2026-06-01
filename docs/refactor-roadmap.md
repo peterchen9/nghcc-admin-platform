@@ -624,3 +624,33 @@ Alignment completed:
 Closure decision:
 - P14 was not a DB isolation, `pytest-xdist`, CI, deploy, `.240`, backend, `tests/`, API scope assignment, or test behavior change.
 - Pytest was not executed.
+
+## P16 Auth Helper Marker Policy Documentation
+
+Updated: 2026-06-01
+
+Scope:
+- Documentation semantics only.
+- No `tests/` changes.
+- No `backend/` changes.
+- No `pytest.ini` changes.
+- No CI changes.
+- No DB changes.
+- No pytest execution.
+- No `pytest-xdist` enablement.
+- No deploy or `.240` work.
+- No API scope assignment.
+
+Policy recorded:
+- `read_only` is an advisory marker, not a transaction guarantee.
+- `read_only` is not a no-session-write guarantee.
+- `read_only` is not a `pytest-xdist` or parallel-safety guarantee.
+- Tests using `client.login()`, `force_login()`, `logged_in_client`, `admin_client`, or other login/session fixtures are auth/session mutation risks unless later evidence proves otherwise.
+- Authenticated GET tests can still save session state or trigger auth side effects.
+- Anonymous write-endpoint rejection tests should not be automatically marked `read_only`.
+- Settings reload tests may remain `read_only` when DB-free, but they mutate process-global settings state rather than proving parallel safety.
+- Global count assertions do not prove safety under concurrent writers.
+
+Closure decision:
+- P16 was not a DB isolation, `pytest-xdist`, CI, deploy, `.240`, backend, `tests/`, API scope assignment, or test behavior change.
+- Pytest was not executed.

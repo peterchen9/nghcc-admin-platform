@@ -15,6 +15,11 @@ The scan covers `tests/` on current `main`.
 - P13 confirmed the previously observed repo-root directories `pytest.ini;C` and `tests;C` were empty and removed both. Pytest discovery now points at the real `pytest.ini` file and `tests/` directory.
 - Because `testpaths = tests` depends on pytest running from the repo root, container or script working-directory drift could cause collection or marker registration surprises. No fix was made in this phase.
 - Authentication helpers are conservative DB-write risks: `client.login()`, `client.force_login()`, `logged_in_client`, and `admin_client` may update `auth_user.last_login` through Django login signals. Files using them should not be marked `read_only` until verified or isolated.
+- P16 records the marker policy explicitly: `read_only` is advisory only. It is not a transaction guarantee, a no-session-write guarantee, or a `pytest-xdist` / parallel-safety guarantee.
+- Tests using `client.login()`, `force_login()`, `logged_in_client`, `admin_client`, or other login/session fixtures remain outside any truly parallel-safe read-only bucket unless later evidence proves they do not write session or auth state.
+- Anonymous write-endpoint rejection tests are not automatically `read_only`; rejected write surfaces still require conservative review.
+- Settings reload tests may remain `read_only` when they do not touch the DB, but they mutate process-global settings state rather than providing a parallel-safety guarantee.
+- Global count assertions are not evidence of parallel safety when another process can write unrelated rows.
 
 ## Shared Fixtures
 
