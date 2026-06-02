@@ -16,17 +16,28 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.contrib.admin.views.decorators import staff_member_required
 from modules.humnos import views as humnos_views
 from modules.hymns import views as hymns_views
 from nads26.health import health_check
+from ckeditor_uploader import views as ckeditor_views
 
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.decorators.csrf import csrf_protect
+
+
+@csrf_protect
+@staff_member_required
+def ckeditor_upload(request, *args, **kwargs):
+    return ckeditor_views.upload(request, *args, **kwargs)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/health/', health_check, name='health-check'),
     path('users/', include('modules.accounts.urls')),
+    path('ckeditor/upload/', ckeditor_upload, name='ckeditor_upload'),
     path('ckeditor/', include('ckeditor_uploader.urls')),
     path('api/humnos/', include('modules.humnos.api_urls')),
     path('api/hymns/', include('modules.hymns.api_urls')),

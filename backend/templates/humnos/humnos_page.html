@@ -428,6 +428,10 @@
         return cookieValue;
     }
 
+    function getCSRFToken() {
+        return getCookie('cms26_csrftoken') || getCookie('csrftoken') || '';
+    }
+
     function toggleFormatFields() {
         const format = document.getElementById('downloadFormat').value;
         const qualityGroup = document.getElementById('qualityGroup');
@@ -477,7 +481,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken') || ''
+                    'X-CSRFToken': getCSRFToken()
                 },
                 body: JSON.stringify({ url: url })
             });
@@ -546,7 +550,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken') || ''
+                    'X-CSRFToken': getCSRFToken()
                 },
                 body: JSON.stringify(payload)
             });
