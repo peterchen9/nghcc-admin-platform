@@ -32,7 +32,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     env_file:
-      - .env.production
+      - path: ${PRODUCTION_ENV_FILE:-.env.production}
+        required: false
     environment:
       DB_HOST: db
       DB_PORT: 3306
@@ -63,7 +64,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     env_file:
-      - .env.production
+      - path: ${PRODUCTION_ENV_FILE:-.env.production}
+        required: false
     environment:
       DB_HOST: db
       DB_PORT: 3306
@@ -85,7 +87,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     env_file:
-      - .env.production
+      - path: ${PRODUCTION_ENV_FILE:-.env.production}
+        required: false
     environment:
       DB_HOST: db
       DB_PORT: 3306
@@ -100,7 +103,8 @@ services:
     container_name: nghcc-admin-db
     image: mysql:8.0
     env_file:
-      - .env.production
+      - path: ${PRODUCTION_ENV_FILE:-.env.production}
+        required: false
     environment:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
