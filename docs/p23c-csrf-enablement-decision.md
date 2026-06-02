@@ -16,6 +16,7 @@
 | P23B humnos positive-path verification | Added mocked `yt_dlp` `/api/humnos/info/` POST with CSRF token |
 | P23B final CSRF wrapper | 99 passed, 0 failed, 39 skipped |
 | P23B final smoke wrapper | 90 passed, 0 failed, 48 skipped |
+| P23D local/staging default change | `ENABLE_CSRF_PROTECTION=True` becomes the local/test fallback and local/test sample default; production remains NO-GO |
 | Production env changed | No |
 | Production DB changed | No |
 | `.240` access / deploy / PR / merge | No |
@@ -25,14 +26,14 @@
 
 | Target | Decision | Rationale |
 | --- | --- | --- |
-| Local | GO | CSRF wiring has passed wrapper coverage after remediation. Local default enablement is appropriate if rollback remains available and local users know Eureka delete is a separate blocker. |
-| Staging | GO | Staging/default-like enablement is appropriate after the same image/config path is rebuilt with the P23B changes and the CSRF wrapper plus smoke wrapper pass in that environment. |
+| Local | GO | CSRF wiring has passed wrapper coverage after remediation. P23D makes local/test defaults CSRF enabled while preserving explicit rollback through `ENABLE_CSRF_PROTECTION=False`. |
+| Staging | GO | Staging/default-like enablement is appropriate after the same image/config path is rebuilt with the P23B/P23D changes and the CSRF wrapper plus smoke wrapper pass in that environment. |
 | Production | NO-GO for immediate enablement | CSRF wiring is ready enough technically, but production enablement should not proceed while Eureka delete remains GET-destructive and other production blockers remain open. |
 
 Answers:
 
-- CSRF wiring is sufficient to enter local default enablement.
-- `ENABLE_CSRF_PROTECTION=True` is recommended as the local/staging default after a controlled default-change phase.
+- CSRF wiring is sufficient for local default enablement.
+- `ENABLE_CSRF_PROTECTION=True` is the recommended local/staging default after P23D.
 - `ENABLE_CSRF_PROTECTION=True` is not recommended for immediate production enablement until production blockers are cleared.
 
 ## 3. Remaining Production Blockers

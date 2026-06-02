@@ -104,7 +104,7 @@ PowerShell：
 .\scripts\run-csrf-tests.ps1
 ```
 
-此腳本只在測試容器內覆寫 `ENABLE_CSRF_PROTECTION=True`，不修改本機 `.env`，不連線 `.240`。`accounts/user_list.html` AJAX CSRF header 已補齊；正式啟用前仍需人工驗證使用者新增、更新、刪除與權限更新流程。
+P23D 後，local/staging defaults use `ENABLE_CSRF_PROTECTION=True`. This wrapper still passes the setting explicitly so CSRF behavior remains pinned during test runs and does not connect to `.240`. P23B fixed CKEditor upload CSRF protection and humnos token fallback; production remains NO-GO until the remaining production blockers are closed.
 
 ## 未來如何擴充
 

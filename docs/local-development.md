@@ -156,7 +156,7 @@ scripts/check-local.sh
 
 ## CSRF 測試模式
 
-本機可用下列腳本驗證 CSRF 復原模式。腳本只在測試容器中覆寫 `ENABLE_CSRF_PROTECTION=True`，不修改 `.env`，不連線 `.240`。
+P23D 後，本機與 local/staging-like sample 預設為 `ENABLE_CSRF_PROTECTION=True`。`scripts/run-csrf-tests.*` 仍會在測試容器中明確傳入 `ENABLE_CSRF_PROTECTION=True`，不連線 `.240`。
 
 Git Bash / WSL2 / Linux：
 
@@ -179,3 +179,5 @@ PowerShell：
 5. 登入、上傳、admin、會員、詩歌人工測試通過。
 6. 已備份正式 DB 與 media。
 7. 已安排 rollback 方法，可回到 `ENABLE_CSRF_PROTECTION=False`。
+
+Production remains NO-GO for CSRF enablement until Eureka GET delete method safety, static/media serving under `DEBUG=False`, production `SECRET_KEY`, `ALLOWED_HOSTS`, DB port exposure, and startup migration gates are closed.

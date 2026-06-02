@@ -142,6 +142,7 @@ scripts/check-local.sh
 - 第二階段已建立 `.env.production.example`。
 - 第二階段已新增 security tests。
 - 第三階段已建立 `ENABLE_CSRF_PROTECTION` 開關。
+- P23D changes the local/staging default to `ENABLE_CSRF_PROTECTION=True` after P23B remediated CKEditor upload CSRF protection and humnos token fallback. Production remains NO-GO until Eureka GET delete method safety, static/media serving, production `SECRET_KEY`, `ALLOWED_HOSTS`, DB port exposure, and startup migration gates are closed.
 - 第三階段已保留 `DisableCSRFMiddleware` 作為相容模式，並可在測試模式啟用 Django `CsrfViewMiddleware`。
 - 第三階段已新增 `tests/security/test_csrf_behavior.py` 與 `scripts/run-csrf-tests.sh` / `scripts/run-csrf-tests.ps1`。
 - 第三階段已完成表單與 AJAX CSRF 盤點。
