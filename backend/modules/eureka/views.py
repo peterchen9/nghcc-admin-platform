@@ -3,6 +3,7 @@ import re
 import datetime
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.http import FileResponse, Http404, HttpResponse
 from django.conf import settings
 from django.db.models import Q, Max, Count
@@ -622,6 +623,7 @@ def duplicates_view(request):
 
 
 @login_required
+@require_POST
 def delete_view(request, church_id):
     """刪除成員"""
     member = get_object_or_404(Member, church_id=church_id)
