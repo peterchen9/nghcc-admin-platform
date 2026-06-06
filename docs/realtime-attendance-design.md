@@ -48,9 +48,16 @@
 ## 相關程式
 
 - `backend/modules/eureka/attendance.py`
+- `backend/modules/eureka/models.py`：`CheckinRecord` 對應既有 `checkin_records` 表，`managed = False`
 - `backend/modules/eureka/views.py`
 - `backend/templates/eureka/eureka.html`
 - `tests/smoke/test_members.py`
+
+## 2026-06-06 後續調整
+
+已新增 `CheckinRecord` unmanaged Django model，讓即時計算服務透過 ORM 讀取 `checkin_records`。資料表仍由既有 DB 管理，不由 Django migration 建表或改 schema。
+
+`checkin_records.timestamp` 目前按資料庫原始本地時間解讀。ORM 查詢刻意使用 MySQL `DATE(timestamp)`、`YEAR(timestamp)`、`DAYOFWEEK(timestamp)`，避免 Django timezone conversion 將週日晚間報到轉成週一凌晨而排除有效主日。
 
 ## 後續核對
 

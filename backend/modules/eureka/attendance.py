@@ -1,7 +1,8 @@
 from collections import defaultdict
-from datetime import date
 
-from django.db import connection
+from django.db.models import Count, DateField, F, Func, IntegerField
+
+from .models import CheckinRecord
 
 
 ATTENDANCE_START_YEAR = 2021
@@ -11,44 +12,43 @@ RECENT_WEEKS = 52
 
 def _fetch_worship_dates():
     """Return observed Sunday worship dates from raw check-in records."""
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT DATE(timestamp) AS worship_date, COUNT(DISTINCT church_id) AS people_count
-            FROM checkin_records
-            WHERE timestamp IS NOT NULL
-              AND church_id IS NOT NULL
-              AND YEAR(timestamp) >= %s
-              AND DAYOFWEEK(timestamp) = 1
-            GROUP BY DATE(timestamp)
-            HAVING people_count >= %s
-            ORDER BY worship_date
-            """,
-            [ATTENDANCE_START_YEAR, MIN_WORSHIP_CHECKINS],
+    rows = (
+        CheckinRecord.objects
+        .filter(
+            timestamp__isnull=False,
+            church_id__isnull=False,
         )
-        return [row[0] for row in cursor.fetchall()]
+        .annotate(
+            raw_year=Func(F("timestamp"), function="YEAR", output_field=IntegerField()),
+            raw_week_day=Func(F("timestamp"), function="DAYOFWEEK", output_field=IntegerField()),
+            worship_date=Func(F("timestamp"), function="DATE", output_field=DateField()),
+        )
+        .filter(
+            raw_year__gte=ATTENDANCE_START_YEAR,
+            raw_week_day=1,
+        )
+        .values("worship_date")
+        .annotate(people_count=Count("church_id", distinct=True))
+        .filter(people_count__gte=MIN_WORSHIP_CHECKINS)
+        .order_by("worship_date")
+    )
+    return [row["worship_date"] for row in rows]
 
 
 def _fetch_member_attendance_dates(church_ids, worship_dates):
     if not church_ids or not worship_dates:
         return defaultdict(set)
 
-    church_placeholders = ", ".join(["%s"] * len(church_ids))
-    date_placeholders = ", ".join(["%s"] * len(worship_dates))
-    params = list(church_ids) + list(worship_dates)
-
-    with connection.cursor() as cursor:
-        cursor.execute(
-            f"""
-            SELECT church_id, DATE(timestamp) AS worship_date
-            FROM checkin_records
-            WHERE church_id IN ({church_placeholders})
-              AND DATE(timestamp) IN ({date_placeholders})
-            GROUP BY church_id, DATE(timestamp)
-            """,
-            params,
+    rows = (
+        CheckinRecord.objects
+        .filter(
+            church_id__in=church_ids,
         )
-        rows = cursor.fetchall()
+        .annotate(worship_date=Func(F("timestamp"), function="DATE", output_field=DateField()))
+        .filter(worship_date__in=worship_dates)
+        .values_list("church_id", "worship_date")
+        .distinct()
+    )
 
     attended = defaultdict(set)
     for church_id, worship_date in rows:
