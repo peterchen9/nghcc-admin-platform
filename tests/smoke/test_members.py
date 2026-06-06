@@ -1,5 +1,5 @@
-from modules.eureka.models import Member
 from modules.eureka.attendance import get_attendance_summary
+from modules.eureka.models import CheckinRecord, Member
 
 
 def test_members_page_is_available(logged_in_client):
@@ -12,10 +12,15 @@ def test_members_table_has_restored_data():
     assert Member.objects.count() >= 7895
 
 
+def test_checkin_records_model_maps_restored_data():
+    assert CheckinRecord.objects.count() >= 107000
+
+
 def test_realtime_attendance_summary_uses_checkin_records():
     summary = get_attendance_summary(7)
 
-    assert summary["source_label"] == "即時計算：checkin_records 主日報到"
-    assert summary["yearly"]
-    assert summary["blocks"]
+    assert "checkin_records" in summary["source_label"]
+    assert summary["display"] == "2023:72% 2024:90% 2025:80%"
+    assert len(summary["blocks"]) == 52
+    assert str(summary["latest_source_date"]) == "2025-12-14"
     assert "percent_year" not in summary
