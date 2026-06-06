@@ -46,3 +46,22 @@ class Member(models.Model):
 
     def __str__(self):
         return f'[{self.church_id}] {self.name}'
+
+
+class CheckinRecord(models.Model):
+    """Raw barcode/check-in record imported from the attendance source."""
+
+    id = models.BigAutoField(primary_key=True)
+    church_id = models.BigIntegerField(null=True, blank=True)
+    timestamp = models.DateTimeField(null=True, blank=True)
+    device_id = models.CharField(max_length=100, null=True, blank=True)
+    raw_id = models.BigIntegerField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'checkin_records'
+        managed = False
+        verbose_name = '報到紀錄'
+        verbose_name_plural = '報到紀錄'
+
+    def __str__(self):
+        return f'[{self.church_id}] {self.timestamp}'
