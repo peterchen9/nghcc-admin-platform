@@ -59,6 +59,15 @@
 
 `checkin_records.timestamp` 目前按資料庫原始本地時間解讀。ORM 查詢刻意使用 MySQL `DATE(timestamp)`、`YEAR(timestamp)`、`DAYOFWEEK(timestamp)`，避免 Django timezone conversion 將週日晚間報到轉成週一凌晨而排除有效主日。
 
+即時計算服務加入 5 分鐘 in-process cache，只快取有效主日日期清單。會員個別出席日期仍即時從 `checkin_records` 查詢，避免搜尋不同會員時拿到過期個人資料。
+
+目前 `checkin_records` 只有 primary key。效能盤點顯示有效主日查詢會全表掃描並 filesort；目前 107k 筆資料下 100 位會員摘要約 90ms，短期可接受。若報到資料繼續成長，建議在取得 schema 變更窗口後新增索引，例如：
+
+```sql
+CREATE INDEX idx_checkin_timestamp_church_id ON checkin_records (timestamp, church_id);
+CREATE INDEX idx_checkin_church_id_timestamp ON checkin_records (church_id, timestamp);
+```
+
 ## 後續核對
 
 第 1、2 項抽樣核對與活石條碼/Datacenter 源頭盤點紀錄於 `docs/attendance-source-audit-2026-06-06.md`。

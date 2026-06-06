@@ -1,6 +1,8 @@
 from collections import defaultdict
+from datetime import timedelta
 
 from django.db.models import Count, DateField, F, Func, IntegerField
+from django.utils import timezone
 
 from .models import CheckinRecord
 
@@ -8,9 +10,17 @@ from .models import CheckinRecord
 ATTENDANCE_START_YEAR = 2021
 MIN_WORSHIP_CHECKINS = 50
 RECENT_WEEKS = 52
+WORSHIP_DATES_CACHE_SECONDS = 300
+NO_ATTENDANCE_RECORDS = "No records"
+SOURCE_LABEL = "Realtime: checkin_records Sunday check-ins"
+
+_worship_dates_cache = {
+    "expires_at": None,
+    "value": None,
+}
 
 
-def _fetch_worship_dates():
+def _fetch_worship_dates_uncached():
     """Return observed Sunday worship dates from raw check-in records."""
     rows = (
         CheckinRecord.objects
@@ -35,15 +45,28 @@ def _fetch_worship_dates():
     return [row["worship_date"] for row in rows]
 
 
+def _fetch_worship_dates():
+    now = timezone.now()
+    if (
+        _worship_dates_cache["value"] is not None
+        and _worship_dates_cache["expires_at"] is not None
+        and _worship_dates_cache["expires_at"] > now
+    ):
+        return _worship_dates_cache["value"]
+
+    worship_dates = _fetch_worship_dates_uncached()
+    _worship_dates_cache["value"] = worship_dates
+    _worship_dates_cache["expires_at"] = now + timedelta(seconds=WORSHIP_DATES_CACHE_SECONDS)
+    return worship_dates
+
+
 def _fetch_member_attendance_dates(church_ids, worship_dates):
     if not church_ids or not worship_dates:
         return defaultdict(set)
 
     rows = (
         CheckinRecord.objects
-        .filter(
-            church_id__in=church_ids,
-        )
+        .filter(church_id__in=church_ids)
         .annotate(worship_date=Func(F("timestamp"), function="DATE", output_field=DateField()))
         .filter(worship_date__in=worship_dates)
         .values_list("church_id", "worship_date")
@@ -113,9 +136,9 @@ def get_attendance_summaries(church_ids):
         summaries[church_id] = {
             "yearly": yearly,
             "blocks": blocks,
-            "display": " ".join(display_items) if display_items else "無紀錄",
+            "display": " ".join(display_items) if display_items else NO_ATTENDANCE_RECORDS,
             "latest_source_date": latest_source_date,
-            "source_label": "即時計算：checkin_records 主日報到",
+            "source_label": SOURCE_LABEL,
         }
 
     return summaries
@@ -127,8 +150,8 @@ def get_attendance_summary(church_id):
         {
             "yearly": [],
             "blocks": [],
-            "display": "無紀錄",
+            "display": NO_ATTENDANCE_RECORDS,
             "latest_source_date": None,
-            "source_label": "即時計算：checkin_records 主日報到",
+            "source_label": SOURCE_LABEL,
         },
     )
