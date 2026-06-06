@@ -1054,18 +1054,22 @@
                     
                     <!-- Attendance Blocks -->
                     <div class="modal-attendance-blocks">
-                        {% if m.data_str %}
-                            {% for char in m.data_str %}
-                                {% if char == '|' %}
-                                    <span class="modal-att-square attended" title="出席"></span>
-                                {% elif char == '_' %}
-                                    <span class="modal-att-square absent" title="缺席"></span>
-                                {% elif char == ' ' %}
-                                    <span class="modal-att-square spacer"></span>
+                        {% if attendance_blocks %}
+                            {% for block in attendance_blocks %}
+                                {% if block.attended %}
+                                    <span class="modal-att-square attended" title="{{ block.date|date:'Y-m-d' }} 出席"></span>
+                                {% else %}
+                                    <span class="modal-att-square absent" title="{{ block.date|date:'Y-m-d' }} 缺席"></span>
                                 {% endif %}
                             {% endfor %}
                         {% else %}
                             <span class="small text-muted py-1">無出席歷史紀錄。</span>
+                        {% endif %}
+                    </div>
+                    <div class="small text-muted mb-2">
+                        {{ attendance_source_label }}
+                        {% if attendance_latest_source_date %}
+                            ，最新資料：{{ attendance_latest_source_date|date:"Y-m-d" }}
                         {% endif %}
                     </div>
                     
