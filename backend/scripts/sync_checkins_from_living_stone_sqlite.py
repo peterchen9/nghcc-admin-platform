@@ -13,6 +13,13 @@ sys.path.append(str(BASE_DIR))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nads26.settings")
 django.setup()
 CHECKIN_RAW_ID_INDEX = "checkin_records_raw_id_idx"
+CHECKIN_TIMESTAMP_CHURCH_INDEX = "idx_checkin_timestamp_church_id"
+CHECKIN_CHURCH_TIMESTAMP_INDEX = "idx_checkin_church_id_timestamp"
+CHECKIN_INDEXES = (
+    (CHECKIN_RAW_ID_INDEX, "raw_id"),
+    (CHECKIN_TIMESTAMP_CHURCH_INDEX, "timestamp, church_id"),
+    (CHECKIN_CHURCH_TIMESTAMP_INDEX, "church_id, timestamp"),
+)
 
 
 def fetch_source_rows(sqlite_path):
@@ -58,26 +65,27 @@ def get_existing_by_raw_id(raw_ids):
     return existing
 
 
-def ensure_raw_id_index():
+def ensure_checkin_indexes():
     with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT COUNT(*)
-            FROM information_schema.statistics
-            WHERE table_schema = DATABASE()
-              AND table_name = 'checkin_records'
-              AND index_name = %s
-            """,
-            [CHECKIN_RAW_ID_INDEX],
-        )
-        if cursor.fetchone()[0]:
-            print(f"raw_id_index={CHECKIN_RAW_ID_INDEX}:exists")
-            return
+        for index_name, columns in CHECKIN_INDEXES:
+            cursor.execute(
+                """
+                SELECT COUNT(*)
+                FROM information_schema.statistics
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'checkin_records'
+                  AND index_name = %s
+                """,
+                [index_name],
+            )
+            if cursor.fetchone()[0]:
+                print(f"checkin_index={index_name}:exists")
+                continue
 
-        cursor.execute(
-            f"CREATE INDEX {CHECKIN_RAW_ID_INDEX} ON checkin_records (raw_id)"
-        )
-        print(f"raw_id_index={CHECKIN_RAW_ID_INDEX}:created")
+            cursor.execute(
+                f"CREATE INDEX {index_name} ON checkin_records ({columns})"
+            )
+            print(f"checkin_index={index_name}:created")
 
 
 def normalize_timestamp(value):
@@ -149,7 +157,7 @@ def main():
     args = parser.parse_args()
 
     if args.apply:
-        ensure_raw_id_index()
+        ensure_checkin_indexes()
 
     source_rows = fetch_source_rows(args.sqlite_path)
     raw_ids = [int(row["id"]) for row in source_rows]

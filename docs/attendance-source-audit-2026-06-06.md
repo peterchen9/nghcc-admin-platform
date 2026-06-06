@@ -226,3 +226,42 @@ updates=0
 inserts=0
 dry_run=true
 ```
+
+## 2026-06-06 recommended index apply record
+
+Started the recommended-change phase by applying the performance indexes previously listed in the realtime attendance design.
+
+Backup:
+
+- `backups/nghcc-admin-db-20260606-165542.sql`
+
+Applied indexes:
+
+- `idx_checkin_timestamp_church_id ON checkin_records (timestamp, church_id)`
+- `idx_checkin_church_id_timestamp ON checkin_records (church_id, timestamp)`
+
+The sync script now treats these as required runtime indexes together with:
+
+- `checkin_records_raw_id_idx ON checkin_records (raw_id)`
+
+Apply output:
+
+```text
+checkin_index=checkin_records_raw_id_idx:exists
+checkin_index=idx_checkin_timestamp_church_id:created
+checkin_index=idx_checkin_church_id_timestamp:created
+existing_raw_ids=130306
+unchanged=130306
+updates=0
+inserts=0
+applied=true
+```
+
+Verification:
+
+```text
+member 7 summary: 2024:94% 2025:71% 2026:50%
+blocks=52
+latest_source_date=2026-05-17
+tests/smoke/test_members.py: 3 passed, 1 skipped
+```

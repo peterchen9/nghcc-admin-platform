@@ -61,12 +61,14 @@
 
 即時計算服務加入 5 分鐘 in-process cache，只快取有效主日日期清單。會員個別出席日期仍即時從 `checkin_records` 查詢，避免搜尋不同會員時拿到過期個人資料。
 
-目前 `checkin_records` 只有 primary key。效能盤點顯示有效主日查詢會全表掃描並 filesort；目前 107k 筆資料下 100 位會員摘要約 90ms，短期可接受。若報到資料繼續成長，建議在取得 schema 變更窗口後新增索引，例如：
+已在 2026-06-06 取得 schema 變更窗口後新增出席查詢索引：
 
 ```sql
 CREATE INDEX idx_checkin_timestamp_church_id ON checkin_records (timestamp, church_id);
 CREATE INDEX idx_checkin_church_id_timestamp ON checkin_records (church_id, timestamp);
 ```
+
+同步工具也會在 `--apply` 時確認上述索引與 `checkin_records_raw_id_idx` 存在，避免大量同步或即時計算退回全表掃描。
 
 ## 後續核對
 
