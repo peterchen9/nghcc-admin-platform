@@ -115,3 +115,65 @@ SSH 只讀盤點：
 - 原始掃碼紀錄 ID
 
 取得聚會/活動類型後，應將目前的「週日 + 50 人門檻」改成明確查詢主日聚會資料。
+
+## 2026-06-06 更新：活石條碼 SQLite 確認
+
+後續確認活石條碼目前不是 MySQL，而是 SQLite：
+
+- `/home/peterchen/living_stone_barcode/nghc_daka/db.sqlite3`
+- `/home/peterchen/address_book/ContactsDB`
+
+活石條碼報到表：
+
+- DB：`/home/peterchen/living_stone_barcode/nghc_daka/db.sqlite3`
+- Table：`check_in_checkinrecord`
+- Rows：`130306`
+- Columns：`id`, `t_check_in`, `church_id`, `family1`, `is_qr_code`, `name`, `section`, `phone_num`
+- Time range：`2020-12-04 06:06:44` 到 `2026-05-21 08:13:59`
+
+通訊錄 SQLite：
+
+- DB：`/home/peterchen/address_book/ContactsDB`
+- 會員主表：`imports_person`
+- Rows：`7896`
+
+活石條碼 Django model 顯示 `CheckInRecord.t_check_in` 使用 `datetime.datetime.now`，主機系統時間為台灣 CST，因此 `t_check_in` 應按本地時間解讀。
+
+### 與 admin-platform 本機 `checkin_records` 的差異
+
+比對結果：
+
+- 本機 `checkin_records.raw_id` 對應活石條碼 `check_in_checkinrecord.id`。
+- 本機既有 `timestamp` 比活石條碼 `t_check_in` 多 16 小時。
+- 例如：
+  - 活石條碼 `id=122981`: `2025-12-14 11:31:25`
+  - 本機 `raw_id=122981`: `2025-12-15 03:31:25`
+
+這表示舊同步或匯入流程產生時區偏移，導致部分週日報到被推到週一，會影響出席計算。
+
+### Dry-run 同步計畫
+
+已新增 dry-run 預設的同步工具：
+
+```bash
+python scripts/sync_checkins_from_living_stone_sqlite.py /path/to/db.sqlite3
+```
+
+本次使用從活石條碼下載的 SQLite 做 dry-run：
+
+```text
+source_rows=130306
+source_first=2020-12-04 06:06:44
+source_last=2026-05-21 08:13:59
+existing_raw_ids=107285
+unchanged=0
+updates=107285
+inserts=23021
+dry_run=true
+```
+
+結論：
+
+- 需要更新本機既有 `107285` 筆報到時間，修正舊的 16 小時偏移。
+- 需要新增 `23021` 筆本機缺少的活石條碼報到資料。
+- 這是大量資料異動；套用前應先備份 admin-platform MySQL，再用 `--apply` 執行。

@@ -71,3 +71,9 @@ CREATE INDEX idx_checkin_church_id_timestamp ON checkin_records (church_id, time
 ## 後續核對
 
 第 1、2 項抽樣核對與活石條碼/Datacenter 源頭盤點紀錄於 `docs/attendance-source-audit-2026-06-06.md`。
+
+## 活石條碼 SQLite 源頭
+
+後續已確認活石條碼使用 SQLite，不使用 MySQL。真正報到源頭為 `/home/peterchen/living_stone_barcode/nghc_daka/db.sqlite3` 的 `check_in_checkinrecord` 表。
+
+admin-platform 本機 `checkin_records.raw_id` 可對應活石條碼 `check_in_checkinrecord.id`，但本機既有 `timestamp` 比活石條碼 `t_check_in` 多 16 小時。這代表目前本機資料仍有舊匯入偏移問題；必須先備份 MySQL，再用 `scripts/sync_checkins_from_living_stone_sqlite.py --apply` 修正既有資料並補入 2026 報到紀錄。
