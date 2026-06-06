@@ -12,6 +12,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 sys.path.append(str(BASE_DIR))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "nads26.settings")
 django.setup()
+CHECKIN_RAW_ID_INDEX = "checkin_records_raw_id_idx"
 
 
 def fetch_source_rows(sqlite_path):
@@ -57,6 +58,28 @@ def get_existing_by_raw_id(raw_ids):
     return existing
 
 
+def ensure_raw_id_index():
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM information_schema.statistics
+            WHERE table_schema = DATABASE()
+              AND table_name = 'checkin_records'
+              AND index_name = %s
+            """,
+            [CHECKIN_RAW_ID_INDEX],
+        )
+        if cursor.fetchone()[0]:
+            print(f"raw_id_index={CHECKIN_RAW_ID_INDEX}:exists")
+            return
+
+        cursor.execute(
+            f"CREATE INDEX {CHECKIN_RAW_ID_INDEX} ON checkin_records (raw_id)"
+        )
+        print(f"raw_id_index={CHECKIN_RAW_ID_INDEX}:created")
+
+
 def normalize_timestamp(value):
     return str(value).split(".")[0]
 
@@ -85,10 +108,15 @@ def build_plan(source_rows, existing_by_raw_id):
     return inserts, updates, unchanged
 
 
-def apply_plan(inserts, updates):
-    with transaction.atomic():
-        with connection.cursor() as cursor:
-            if updates:
+def iter_chunks(rows, chunk_size):
+    for start in range(0, len(rows), chunk_size):
+        yield rows[start:start + chunk_size]
+
+
+def apply_plan(inserts, updates, chunk_size=1000):
+    for chunk in iter_chunks(updates, chunk_size):
+        with transaction.atomic():
+            with connection.cursor() as cursor:
                 cursor.executemany(
                     """
                     UPDATE checkin_records
@@ -97,15 +125,18 @@ def apply_plan(inserts, updates):
                         device_id = %s
                     WHERE raw_id = %s
                     """,
-                    updates,
+                    chunk,
                 )
-            if inserts:
+
+    for chunk in iter_chunks(inserts, chunk_size):
+        with transaction.atomic():
+            with connection.cursor() as cursor:
                 cursor.executemany(
                     """
                     INSERT INTO checkin_records (church_id, timestamp, device_id, raw_id)
                     VALUES (%s, %s, %s, %s)
                     """,
-                    inserts,
+                    chunk,
                 )
 
 
@@ -116,6 +147,9 @@ def main():
     parser.add_argument("sqlite_path", help="Path to living_stone_barcode/nghc_daka/db.sqlite3")
     parser.add_argument("--apply", action="store_true", help="Write changes. Default is dry-run.")
     args = parser.parse_args()
+
+    if args.apply:
+        ensure_raw_id_index()
 
     source_rows = fetch_source_rows(args.sqlite_path)
     raw_ids = [int(row["id"]) for row in source_rows]

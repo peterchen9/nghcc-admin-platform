@@ -177,3 +177,52 @@ dry_run=true
 - 需要更新本機既有 `107285` 筆報到時間，修正舊的 16 小時偏移。
 - 需要新增 `23021` 筆本機缺少的活石條碼報到資料。
 - 這是大量資料異動；套用前應先備份 admin-platform MySQL，再用 `--apply` 執行。
+## 2026-06-06 apply record
+
+Required attendance-source fix was applied after backup.
+
+Backup:
+
+- `backups/nghcc-admin-db-20260606-154152.sql`
+- Size: 14126885 bytes
+- Header verified as MySQL dump for database `nghcc_admin`
+
+Operational notes:
+
+- `checkin_records` originally had only the primary key.
+- Large updates by `raw_id` timed out while `raw_id` was unindexed.
+- Added index: `checkin_records_raw_id_idx ON checkin_records (raw_id)`.
+- Updated `scripts/sync_checkins_from_living_stone_sqlite.py` so future `--apply` runs ensure the index exists and apply rows in batches.
+
+Final apply output:
+
+```text
+raw_id_index=checkin_records_raw_id_idx:exists
+source_rows=130306
+source_first=2020-12-04 06:06:44
+source_last=2026-05-21 08:13:59
+existing_raw_ids=107285
+unchanged=0
+updates=107285
+inserts=23021
+applied=true
+```
+
+Post-apply database verification:
+
+```text
+total=130306
+first_ts=2020-12-04 06:06:44
+last_ts=2026-05-21 08:13:59
+raw_ids=130306
+```
+
+Post-apply dry-run verification:
+
+```text
+existing_raw_ids=130306
+unchanged=130306
+updates=0
+inserts=0
+dry_run=true
+```

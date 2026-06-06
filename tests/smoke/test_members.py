@@ -13,14 +13,14 @@ def test_members_table_has_restored_data():
 
 
 def test_checkin_records_model_maps_restored_data():
-    assert CheckinRecord.objects.count() >= 107000
+    assert CheckinRecord.objects.count() >= 130000
 
 
 def test_realtime_attendance_summary_uses_checkin_records():
     summary = get_attendance_summary(7)
 
     assert "checkin_records" in summary["source_label"]
-    assert summary["display"] == "2023:72% 2024:90% 2025:80%"
+    assert summary["display"] == "2024:94% 2025:71% 2026:50%"
     assert len(summary["blocks"]) == 52
-    assert str(summary["latest_source_date"]) == "2025-12-14"
+    assert str(summary["latest_source_date"]) == "2026-05-17"
     assert "percent_year" not in summary

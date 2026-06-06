@@ -77,3 +77,41 @@ CREATE INDEX idx_checkin_church_id_timestamp ON checkin_records (church_id, time
 後續已確認活石條碼使用 SQLite，不使用 MySQL。真正報到源頭為 `/home/peterchen/living_stone_barcode/nghc_daka/db.sqlite3` 的 `check_in_checkinrecord` 表。
 
 admin-platform 本機 `checkin_records.raw_id` 可對應活石條碼 `check_in_checkinrecord.id`，但本機既有 `timestamp` 比活石條碼 `t_check_in` 多 16 小時。這代表目前本機資料仍有舊匯入偏移問題；必須先備份 MySQL，再用 `scripts/sync_checkins_from_living_stone_sqlite.py --apply` 修正既有資料並補入 2026 報到紀錄。
+## 2026-06-06 required fix completion
+
+Attendance data is now synced from Living Stone Barcode SQLite into local `checkin_records`.
+
+Applied source:
+
+- Remote SQLite: `/home/peterchen/living_stone_barcode/nghc_daka/db.sqlite3`
+- Table: `check_in_checkinrecord`
+- Mapping: source `id` -> local `checkin_records.raw_id`
+- Mapping: source `t_check_in` -> local `checkin_records.timestamp`
+
+Local database state after apply:
+
+```text
+checkin_records total=130306
+first_ts=2020-12-04 06:06:44
+last_ts=2026-05-21 08:13:59
+raw_ids=130306
+```
+
+Attendance summary verification examples:
+
+```text
+7    2024:94% 2025:71% 2026:50% latest=2026-05-17 blocks=52
+9    2024:85% 2025:83% 2026:75% latest=2026-05-17 blocks=52
+10   2024:73% 2025:52% 2026:90% latest=2026-05-17 blocks=52
+2    2024:40% 2025:56% 2026:45% latest=2026-05-17 blocks=52
+3    2024:15% 2025:13% 2026:5% latest=2026-05-17 blocks=52
+2162 2024:69% 2025:58% 2026:75% latest=2026-05-17 blocks=52
+```
+
+Smoke test:
+
+```text
+tests/smoke/test_members.py: 3 passed, 1 skipped
+```
+
+The skipped case is the login smoke test because `TEST_USERNAME` and `TEST_PASSWORD` were not provided in the test command.
