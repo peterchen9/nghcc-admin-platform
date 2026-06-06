@@ -51,3 +51,7 @@
 - `backend/modules/eureka/views.py`
 - `backend/templates/eureka/eureka.html`
 - `tests/smoke/test_members.py`
+
+## 後續核對
+
+第 1、2 項抽樣核對與活石條碼/Datacenter 源頭盤點紀錄於 `docs/attendance-source-audit-2026-06-06.md`。
