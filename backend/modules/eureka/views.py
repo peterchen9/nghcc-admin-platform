@@ -9,6 +9,7 @@ from django.db.models import Q, Max, Count
 from django.contrib import messages
 from openpyxl import Workbook
 from nads26.upload_validation import UploadValidationError, validate_uploaded_file
+from .attendance import get_attendance_summaries, get_attendance_summary
 from .models import Member
 
 # 照片目錄路徑
@@ -129,6 +130,7 @@ def eureka_view(request):
     sections = Member.objects.exclude(section='').values_list('section', flat=True).distinct().order_by('section')
     
     if results is not None:
+        attendance_summaries = get_attendance_summaries([m.church_id for m in results])
         # 對於搜尋結果，我們可以直接獲取每個會員的家族成員，供卡片顯示
         for m in results:
             if m.family_id:
@@ -136,11 +138,8 @@ def eureka_view(request):
             else:
                 m.family_list = []
                 
-            # 解析卡片顯示出席率 (例如: "55 57 88 88 73 100")
-            if m.percent_year:
-                m.att_percent_display = m.percent_year.replace('-', ' ')
-            else:
-                m.att_percent_display = "無紀錄"
+            attendance_summary = attendance_summaries.get(m.church_id)
+            m.att_percent_display = attendance_summary["display"] if attendance_summary else "無紀錄"
             
     return render(request, 'eureka/eureka.html', {
         'results': results,
@@ -191,34 +190,25 @@ def melos_view(request, church_id):
             else:
                 first_checkin = "-"
 
-    # 解析年度出席率以供圖表使用 (55-57-88-88-73-100 -> 2021~2026 年)
-    yearly_attendance = []
-    if member.percent_year:
-        rates = member.percent_year.split('-')
-        years = [2021, 2022, 2023, 2024, 2025, 2026]
-        for y, r in zip(years, rates):
-            try:
-                yearly_attendance.append({
-                    'year': y,
-                    'rate': int(r),
-                })
-            except ValueError:
-                pass
+    attendance_summary = get_attendance_summary(member.church_id)
+    yearly_attendance = attendance_summary["yearly"]
+    attendance_blocks = attendance_summary["blocks"]
+    attendance_source_label = attendance_summary["source_label"]
+    attendance_latest_source_date = attendance_summary["latest_source_date"]
 
     results = get_search_results(request)
     sections = Member.objects.exclude(section='').values_list('section', flat=True).distinct().order_by('section')
     
     if results is not None:
+        attendance_summaries = get_attendance_summaries([m_item.church_id for m_item in results])
         for m_item in results:
             if m_item.family_id:
                 m_item.family_list = Member.objects.filter(family_id=m_item.family_id).exclude(church_id=m_item.church_id)
             else:
                 m_item.family_list = []
                 
-            if m_item.percent_year:
-                m_item.att_percent_display = m_item.percent_year.replace('-', ' ')
-            else:
-                m_item.att_percent_display = "無紀錄"
+            attendance_summary = attendance_summaries.get(m_item.church_id)
+            m_item.att_percent_display = attendance_summary["display"] if attendance_summary else "無紀錄"
 
     return render(request, 'eureka/eureka.html', {
         'results': results,
@@ -230,6 +220,9 @@ def melos_view(request, church_id):
         'att_records': att_records,
         'first_checkin': first_checkin,
         'yearly_attendance': yearly_attendance,
+        'attendance_blocks': attendance_blocks,
+        'attendance_source_label': attendance_source_label,
+        'attendance_latest_source_date': attendance_latest_source_date,
         'query_params_url': request.GET.urlencode(),
     })
 
@@ -332,6 +325,7 @@ def pastoral_view(request):
             active_sections.append(sec['name'])
             
     all_members = Member.objects.filter(section__in=active_sections).order_by('name')
+    pastoral_attendance_summaries = get_attendance_summaries([m.church_id for m in all_members])
     
     # 3. 在記憶體中進行分組與資料處理，避免 N+1 查詢
     members_by_section = {}
@@ -347,10 +341,8 @@ def pastoral_view(request):
         else:
             m.family_list = []
             
-        if m.percent_year:
-            m.att_percent_display = m.percent_year.replace('-', ' ')
-        else:
-            m.att_percent_display = "無紀錄"
+        attendance_summary = pastoral_attendance_summaries.get(m.church_id)
+        m.att_percent_display = attendance_summary["display"] if attendance_summary else "無紀錄"
             
     # 4. 組裝結構資料
     for category in pastoral_structure:
